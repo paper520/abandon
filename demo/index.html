@@ -11,7 +11,59 @@
 </head>
 
 <body>
-  <h4>温馨提示：开发阶段，功能还没有实现，已经完成整体的规划，有待未来几个月慢慢丰富具体内容！</h4>
+  <div id='root'>
+    {{message}}
+  </div>
+  <script>
+    new Abandon({
+
+      // 挂载的结点
+      el: document.getElementById('root'),
+
+      // 数据
+      data() {
+        return {
+          message: "Hello Abandon!"
+        };
+      },
+
+      template: "<span>{{data.message}}</span>",
+
+      // 生命周期
+      beforeCreate() {
+        console.log("beforeCreate");
+        console.warn(this);
+      },
+      created() {
+        console.log("created");
+        console.warn(this);
+      },
+      beforeMount() {
+        console.log("beforeMount");
+        console.warn(this);
+      },
+      mounted() {
+        console.log("mounted");
+        console.warn(this);
+      },
+      beforeUpdate() {
+        console.log("beforeUpdate");
+        console.warn(this);
+      },
+      updated() {
+        console.log("updated");
+        console.warn(this);
+      },
+      beforeDestroy() {
+        console.log("beforeDestroy");
+        console.warn(this);
+      },
+      destroyed() {
+        console.log("destroyed");
+        console.warn(this);
+      }
+    });
+  </script>
 </body>
 
 </html>
