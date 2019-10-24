@@ -1,6 +1,5 @@
 import Watcher from '../observe/watcher';
 import isFunction from '@yelloxing/core.js/isFunction';
-import { toNode } from '../_utils/tool';
 import get from '@yelloxing/core.js/get';
 
 export function lifecycleMixin(Abandon) {
@@ -10,15 +9,26 @@ export function lifecycleMixin(Abandon) {
       this.beforeUpdate.call(this);
     }
 
-    // 检查全部的{{}}
+    /**
+     * 开始重新渲染页面
+     * ----------------------------------
+     */
     let _this = this;
-    this.template = this.template.replace(/{{[^}]+}}/g, function (oldValue) {
-      let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
-      return value;
-    });
 
-    let newEl = toNode(this.template);
-    this.el.parentNode.replaceChild(newEl, this.el);
+    // 更新文本结点
+    const textBinds = this.vnode.textBind;
+    for (let i = 0; i < textBinds.length; i++) {
+      let text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
+        let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+        return value;
+      });
+      textBinds[i].el.parentNode.replaceChild(document.createTextNode(text), textBinds[i].el);
+    }
+
+    /**
+     * 结束重新渲染页面
+     * ----------------------------------
+     */
 
     if (isFunction(this.updated)) {
       this.updated.call(this);

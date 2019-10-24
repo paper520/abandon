@@ -12,7 +12,21 @@
 
 <body>
   <div id='root'>
-    {{message}}
+    <h2>
+      1.单向绑定
+    </h2>
+    {{data.message}}
+    |
+    <span v-bind='message'></span>
+    <h2>
+      2.事件
+    </h2>
+    <input type="button" value="单击" @click='doIt()'>
+    <input type="button" value="双击" @dblclick='doIt()'>
+    <h2>
+      3.双向绑定
+    </h2>
+    <input type="text" v-model='message'>
   </div>
   <script>
     new Abandon({
@@ -27,7 +41,22 @@
         };
       },
 
-      template: "<span>{{data.message}}</span>",
+      // template: "<span>{{data.message}}</span>",
+
+      render: function (createElement) {
+        return createElement('span', {}, [
+          "{{data.message}}-{{data.message}}",
+          createElement("i", {
+            "class": "info"
+          }, ["={{data.message}}="])
+        ]);
+      },
+
+      methods: {
+        doIt() {
+          this.data.message = "[" + new Date() + "]" + this.data.message;
+        }
+      },
 
       // 生命周期
       beforeCreate() {

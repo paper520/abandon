@@ -78,23 +78,94 @@
 
     }
 
-    function Watcher (abandon, update) {
-      update.call(abandon);
+    /**
+     * 判断一个值是不是String。
+     *
+     * @since V0.1.2
+     * @public
+     * @param {*} value 需要判断类型的值
+     * @returns {boolean} 如果是String返回true，否则返回false
+     */
+    function isString (value) {
+        const type = typeof value;
+        return type === 'string' || (type === 'object' && value != null && !Array.isArray(value) && getType(value) === '[object String]');
     }
 
-    function outHTML(el) {
-      if (el.outerHTML) {
-        return el.outerHTML;
-      } else {
-        const container = document.createElement('div');
-        container.appendChild(el.cloneNode(true));
-        return container.innerHTML;
+    function createElement (tagName, attrs, children) {
+
+      // 先不考虑自定义组件
+      const node = document.createElement(tagName);
+
+      let directive = [], textBind = [];
+
+      attrs = attrs || {};
+      for (let key in attrs) {
+
+        // 指令什么的特殊属性稍后添加判断
+        node[key] = attrs[key];
       }
+
+      // 迭代子孩子
+      children = children || [];
+      for (let i = 0; i < children.length; i++) {
+        let childNode = children[i];
+
+        // 如果是字符串，需要变成结点
+        if (isString(childNode)) {
+          let text = childNode;
+          childNode = {
+            el: document.createTextNode(text),
+            text
+          };
+
+          // 特殊的文本结点
+          textBind.push(childNode);
+        } else {
+
+          // 合并指令
+          for (let i = 0; i < childNode.directive.length; i++) {
+            directive.push(childNode.directive[i]);
+          }
+
+          // 合并文本结点
+          for (let i = 0; i < childNode.textBind.length; i++) {
+            textBind.push(childNode.textBind[i]);
+          }
+
+          // 非文本结点，我们需要追加指令统计
+          // todo
+
+        }
+
+        // 追加
+        node.appendChild(childNode.el);
+      }
+
+      return {
+        el: node,
+        directive,
+        textBind
+      };
     }
-    function toNode(template) {
-      const container = document.createElement('div');
-      container.innerHTML = template;
-      return container.firstElementChild;
+
+    // 我们需要在这里挂载好结点
+    // 同时编译（就是获取需要同步的数据、指令、组件等信息）
+    function Watcher (abandon, update) {
+
+      // 获取虚拟结点
+      abandon.vnode = abandon.render(createElement);
+
+      // 挂载真实结点到页面
+      let newEl = abandon.vnode.el;
+      newEl.setAttribute('uid', abandon._uid);
+      abandon.el.parentNode.replaceChild(newEl, abandon.el);
+
+      // 第一次更新
+      update.call(abandon);
+
+      // 注册数据改变的时候触发更新
+      // todo
+
     }
 
     /**
@@ -236,15 +307,26 @@
           this.beforeUpdate.call(this);
         }
 
-        // 检查全部的{{}}
+        /**
+         * 开始重新渲染页面
+         * ----------------------------------
+         */
         let _this = this;
-        this.template = this.template.replace(/{{[^}]+}}/g, function (oldValue) {
-          let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
-          return value;
-        });
 
-        let newEl = toNode(this.template);
-        this.el.parentNode.replaceChild(newEl, this.el);
+        // 更新文本结点
+        const textBinds = this.vnode.textBind;
+        for (let i = 0; i < textBinds.length; i++) {
+          let text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
+            let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+            return value;
+          });
+          textBinds[i].el.parentNode.replaceChild(document.createTextNode(text), textBinds[i].el);
+        }
+
+        /**
+         * 结束重新渲染页面
+         * ----------------------------------
+         */
 
         if (isFunction(this.updated)) {
           this.updated.call(this);
@@ -264,6 +346,10 @@
       if (isFunction(abandon.mounted)) {
         abandon.mounted.call(abandon);
       }
+    }
+
+    function createRenderFactroy(template) {
+
     }
 
     /**
@@ -334,28 +420,28 @@
     // 混淆进去生命周期相关方法
     lifecycleMixin(Abandon);
 
-    /**
-     * 判断一个值是不是String。
-     *
-     * @since V0.1.2
-     * @public
-     * @param {*} value 需要判断类型的值
-     * @returns {boolean} 如果是String返回true，否则返回false
-     */
-    function isString (value) {
-        const type = typeof value;
-        return type === 'string' || (type === 'object' && value != null && !Array.isArray(value) && getType(value) === '[object String]');
+    function outHTML(el) {
+      if (el.outerHTML) {
+        return el.outerHTML;
+      } else {
+        const container = document.createElement('div');
+        container.appendChild(el.cloneNode(true));
+        return container.innerHTML;
+      }
     }
 
     Abandon.prototype.$mount = function (el) {
 
       // 警告：本版本不采用render方式
+      if (!isFunction(this.render)) {
+        // 如果template没有设置或设置的不是字符串
+        if (!this.template || !isString(this.template)) {
 
-      // 如果template没有设置或设置的不是字符串
-      if (!this.template || !isString(this.template)) {
+          // 直接选择el
+          this.template = outHTML(el);
+        }
 
-        // 直接选择el
-        this.template = outHTML(el);
+        this.render = createRenderFactroy(template);
       }
 
       // 一切准备好了以后，挂载
