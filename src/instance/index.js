@@ -1,5 +1,4 @@
 import { initMixin } from './init';
-import { stateMixin } from './state';
 import { eventsMixin } from './events'
 import { lifecycleMixin } from './lifecycle';
 import { renderMixin } from './render';
@@ -31,9 +30,6 @@ function Abandon(options) {
 
 // 混淆进入最基本的方法
 initMixin(Abandon);
-
-// 混淆进去基本的数据相关方法
-stateMixin(Abandon);
 
 // 混淆事件相关方法
 eventsMixin(Abandon);

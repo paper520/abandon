@@ -324,28 +324,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         this.beforeUpdate.call(this);
       }
 
-      /**
-       * 开始重新渲染页面
-       * ----------------------------------
-       */
-      var _this = this;
-
-      // 更新文本结点
-      var textBinds = this.vnode.textBind;
-      for (var i = 0; i < textBinds.length; i++) {
-        var text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
-          var value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
-          return value;
-        });
-        var newEl = document.createTextNode(text);
-        textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
-        textBinds[i].el = newEl;
-      }
-
-      /**
-       * 结束重新渲染页面
-       * ----------------------------------
-       */
+      // 更新DOM
+      this._update();
 
       if (isFunction(this.updated)) {
         this.updated.call(this);
@@ -366,6 +346,24 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   }
 
+  function renderMixin(Abandon) {
+
+    Abandon.prototype._update = function () {
+      var _this = this;
+
+      // 更新文本结点
+      var textBinds = this.vnode.textBind;
+      for (var i = 0; i < textBinds.length; i++) {
+        var text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
+          var value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+          return value;
+        });
+        var newEl = document.createTextNode(text);
+        textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
+        textBinds[i].el = newEl;
+      }
+    };
+  }
   function createRenderFactroy(template) {}
 
   /**
@@ -433,6 +431,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   // 混淆进去生命周期相关方法
   lifecycleMixin(Abandon);
 
+  // 混淆渲染组件的方法
+  renderMixin(Abandon);
+
   function outHTML(el) {
     if (el.outerHTML) {
       return el.outerHTML;
@@ -445,7 +446,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
   Abandon.prototype.$mount = function (el) {
 
-    // 警告：本版本不采用render方式
     if (!isFunction(this.render)) {
       // 如果template没有设置或设置的不是字符串
       if (!this.template || !isString(this.template)) {

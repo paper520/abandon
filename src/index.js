@@ -11,7 +11,6 @@ initGlobalAPI(Abandon);
 
 Abandon.prototype.$mount = function (el) {
 
-  // 警告：本版本不采用render方式
   if (!isFunction(this.render)) {
     // 如果template没有设置或设置的不是字符串
     if (!this.template || !isString(this.template)) {
