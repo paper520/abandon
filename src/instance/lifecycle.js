@@ -22,7 +22,9 @@ export function lifecycleMixin(Abandon) {
         let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
         return value;
       });
-      textBinds[i].el.parentNode.replaceChild(document.createTextNode(text), textBinds[i].el);
+      let newEl = document.createTextNode(text);
+      textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
+      textBinds[i].el = newEl;
     }
 
     /**

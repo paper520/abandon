@@ -149,25 +149,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
   }
 
-  // 我们需要在这里挂载好结点
-  // 同时编译（就是获取需要同步的数据、指令、组件等信息）
-  function Watcher(abandon, update) {
-
-    // 获取虚拟结点
-    abandon.vnode = abandon.render(createElement);
-
-    // 挂载真实结点到页面
-    var newEl = abandon.vnode.el;
-    newEl.setAttribute('uid', abandon._uid);
-    abandon.el.parentNode.replaceChild(newEl, abandon.el);
-
-    // 第一次更新
-    update.call(abandon);
-
-    // 注册数据改变的时候触发更新
-    // todo
-  }
-
   /**
    * 判断一个值是不是symbol。
    *
@@ -299,6 +280,43 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return result === undefined ? defaultValue : result;
   }
 
+  // 我们需要在这里挂载好结点
+  // 同时编译（就是获取需要同步的数据、指令、组件等信息）
+  function Watcher(abandon, update) {
+
+    // 获取虚拟结点
+    abandon.vnode = abandon.render(createElement);
+
+    // 挂载真实结点到页面
+    var newEl = abandon.vnode.el;
+    newEl.setAttribute('uid', abandon._uid);
+    abandon.el.parentNode.replaceChild(newEl, abandon.el);
+
+    // 第一次更新
+    update.call(abandon);
+
+    // 注册数据改变的时候触发更新
+
+    var _loop = function _loop(key) {
+      var value = get(abandon.data, key);
+
+      // 针对data进行拦截，后续对data的数据添加不会自动监听了
+      Object.defineProperty(abandon.data, key, {
+        get: function get() {
+          return value;
+        },
+        set: function set(newValue) {
+          value = newValue;
+          update.call(abandon);
+        }
+      });
+    };
+
+    for (var key in abandon.data) {
+      _loop(key);
+    }
+  }
+
   function lifecycleMixin(Abandon) {
 
     Abandon.prototype._update = function () {
@@ -319,7 +337,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
           var value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
           return value;
         });
-        textBinds[i].el.parentNode.replaceChild(document.createTextNode(text), textBinds[i].el);
+        var newEl = document.createTextNode(text);
+        textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
+        textBinds[i].el = newEl;
       }
 
       /**

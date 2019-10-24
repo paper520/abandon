@@ -1,4 +1,5 @@
 import createElement from '../vnode/index';
+import get from '@yelloxing/core.js/get';
 
 // 我们需要在这里挂载好结点
 // 同时编译（就是获取需要同步的数据、指令、组件等信息）
@@ -16,6 +17,19 @@ export default function (abandon, update) {
   update.call(abandon);
 
   // 注册数据改变的时候触发更新
-  // todo
+  for (let key in abandon.data) {
+    let value = get(abandon.data, key);
+
+    // 针对data进行拦截，后续对data的数据添加不会自动监听了
+    Object.defineProperty(abandon.data, key, {
+      get() {
+        return value;
+      },
+      set(newValue) {
+        value = newValue;
+        update.call(abandon);
+      }
+    });
+  }
 
 };
