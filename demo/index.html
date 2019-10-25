@@ -22,7 +22,8 @@
       2.事件
     </h2>
     <input type="button" value="单击" @click='doIt()'>
-    <input type="button" value="双击" @dblclick='doIt()'>
+    |
+    <input type="button" value="鼠标进入" @mouseenter='doIt()'>
     <h2>
       3.双向绑定
     </h2>
@@ -54,7 +55,7 @@
 
       methods: {
         doIt() {
-          this.data.message = "[" + new Date() + "]";
+          this.data.message = new Date().valueOf();
         }
       },
 

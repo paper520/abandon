@@ -728,6 +728,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   };
 
+  var component = {};
+
   function initGlobalAPI(Abandon) {
 
     // 注册指令方法
@@ -744,6 +746,28 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     // 注册内部指令
     Abandon.directive('bind', bind$1);
     Abandon.directive('model', model);
+
+    // 注册组件方法
+    /**
+     * template
+     * data
+     * methods
+     * beforeCreate
+     * created
+     * beforeMount
+     * mounted
+     * beforeUpdate
+     * updated
+     * beforeDestroy
+     * destroyed
+     */
+    Abandon.prototype.$component = {};
+    Abandon.component = function (name, config) {
+      Abandon.prototype.$component[name] = config;
+    };
+
+    // 注册内部组件
+    Abandon.component('component', component);
   }
 
   // 挂载全局的静态方法
