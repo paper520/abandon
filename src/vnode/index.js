@@ -9,8 +9,25 @@ export default function (tagName, attrs, children) {
   attrs = attrs || {};
   for (let key in attrs) {
 
-    // 指令什么的特殊属性稍后添加判断
-    node[key] = attrs[key];
+    // 指令
+    if (/^v-/.test(key)) {
+      directive.push({
+        el: node,
+        directiveName: key,
+        directiveValue: attrs[key]
+      });
+    }
+
+    // 结点事件
+    else if (/^@/.test(key)) {
+      console.warn("[事件]]" + key + ":" + attrs[key]);
+    }
+
+    // 普通属性
+    else {
+      node.setAttribute(key, attrs[key]);
+    }
+
   }
 
   // 迭代子孩子
@@ -21,6 +38,12 @@ export default function (tagName, attrs, children) {
     // 如果是字符串，需要变成结点
     if (isString(childNode)) {
       let text = childNode;
+
+      // 空白、回车等完全空白的不记录
+      if (/^[\x20\t\r\n\f]{0,}$/.test(text)) {
+        continue;
+      }
+
       childNode = {
         el: document.createTextNode(text),
         text
@@ -28,6 +51,8 @@ export default function (tagName, attrs, children) {
 
       // 特殊的文本结点
       textBind.push(childNode);
+
+
     } else {
 
       // 合并指令
@@ -39,9 +64,6 @@ export default function (tagName, attrs, children) {
       for (let i = 0; i < childNode.textBind.length; i++) {
         textBind.push(childNode.textBind[i]);
       }
-
-      // 非文本结点，我们需要追加指令统计
-      // todo
 
     }
 

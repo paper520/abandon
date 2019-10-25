@@ -19,7 +19,8 @@ Abandon.prototype.$mount = function (el) {
       this.template = outHTML(el);
     }
 
-    this.render = createRenderFactroy(template);
+    // 根据template生成render函数
+    this.render = createRenderFactroy(this.template);
   }
 
   // 一切准备好了以后，挂载

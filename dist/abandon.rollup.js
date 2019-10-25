@@ -101,8 +101,25 @@
       attrs = attrs || {};
       for (let key in attrs) {
 
-        // 指令什么的特殊属性稍后添加判断
-        node[key] = attrs[key];
+        // 指令
+        if (/^v-/.test(key)) {
+          directive.push({
+            el: node,
+            directiveName: key,
+            directiveValue: attrs[key]
+          });
+        }
+
+        // 结点事件
+        else if (/^@/.test(key)) {
+          console.warn("[事件]]" + key + ":" + attrs[key]);
+        }
+
+        // 普通属性
+        else {
+          node.setAttribute(key, attrs[key]);
+        }
+
       }
 
       // 迭代子孩子
@@ -113,6 +130,12 @@
         // 如果是字符串，需要变成结点
         if (isString(childNode)) {
           let text = childNode;
+
+          // 空白、回车等完全空白的不记录
+          if (/^[\x20\t\r\n\f]{0,}$/.test(text)) {
+            continue;
+          }
+
           childNode = {
             el: document.createTextNode(text),
             text
@@ -120,6 +143,8 @@
 
           // 特殊的文本结点
           textBind.push(childNode);
+
+
         } else {
 
           // 合并指令
@@ -131,9 +156,6 @@
           for (let i = 0; i < childNode.textBind.length; i++) {
             textBind.push(childNode.textBind[i]);
           }
-
-          // 非文本结点，我们需要追加指令统计
-          // todo
 
         }
 
@@ -344,29 +366,6 @@
       }
     }
 
-    function renderMixin(Abandon) {
-
-      Abandon.prototype._refurbish = function () {
-        let _this = this;
-
-        // 更新文本结点
-        const textBinds = this.vnode.textBind;
-        for (let i = 0; i < textBinds.length; i++) {
-          let text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
-            let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
-            return value;
-          });
-          let newEl = document.createTextNode(text);
-          textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
-          textBinds[i].el = newEl;
-        }
-      };
-
-    }
-    function createRenderFactroy(template) {
-
-    }
-
     /**
      * 判断一个值是不是一个朴素的'对象'
      *
@@ -406,6 +405,92 @@
             !isPlainObject(value);
     }
 
+    function outHTML(el) {
+      if (el.outerHTML) {
+        return el.outerHTML;
+      } else {
+        const container = document.createElement('div');
+        container.appendChild(el.cloneNode(true));
+        return container.innerHTML;
+      }
+    }function toNode(template) {
+      if (isElement(template)) {
+        return template;
+      }
+
+      // 如果是字符串模板
+      const container = document.createElement('div');
+      container.innerHTML = template;
+      return container.firstElementChild;
+    }
+
+    /**
+     * 判断一个值是不是文本结点。
+     *
+     * @since V0.1.2
+     * @public
+     * @param {*} value 需要判断类型的值
+     * @returns {boolean} 如果是结点元素返回true，否则返回false
+     */
+    function isText (value) {
+        return value !== null && typeof value === 'object' &&
+            value.nodeType === 3 && !isPlainObject(value);
+    }
+
+    function renderMixin(Abandon) {
+
+      // 第一次或数据改变的时候，更新页面
+      Abandon.prototype._refurbish = function () {
+        let _this = this;
+
+        // 更新文本结点
+        const textBinds = this.vnode.textBind;
+        for (let i = 0; i < textBinds.length; i++) {
+          let text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
+            let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+            return value;
+          });
+          let newEl = document.createTextNode(text);
+          textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
+          textBinds[i].el = newEl;
+        }
+
+      };
+
+    }
+    // 根据字符串模板生成render函数
+    function createRenderFactroy(template) {
+
+      let doit = function (node, createElement) {
+        let childNodes = node.childNodes, childRenders = [];
+        for (let i = 0; i < childNodes.length; i++) {
+
+          // 如果是文本结点
+          if (isText(childNodes[i])) {
+            childRenders.push(childNodes[i].textContent);
+          }
+
+          // 如果是标签结点
+          else if (isElement(childNodes[i])) {
+            childRenders.push(doit(childNodes[i], createElement));
+          }
+        }
+
+        // 记录属性
+        let attrs = {};
+        for (let i = 0; i < node.attributes.length; i++) {
+          attrs[node.attributes[i].nodeName] = node.attributes[i].nodeValue;
+        }
+
+        // 返回生成的元素
+        return createElement(node.tagName, attrs, childRenders);
+      };
+
+      return function (createElement) {
+        return doit(toNode(template), createElement);
+      };
+    }
+
     function Abandon(options) {
       if (!(this instanceof Abandon)) {
         throw new Error('Abandon is a constructor and should be called with the `new` keyword');
@@ -438,16 +523,6 @@
     // 混淆渲染组件的方法
     renderMixin(Abandon);
 
-    function outHTML(el) {
-      if (el.outerHTML) {
-        return el.outerHTML;
-      } else {
-        const container = document.createElement('div');
-        container.appendChild(el.cloneNode(true));
-        return container.innerHTML;
-      }
-    }
-
     Abandon.prototype.$mount = function (el) {
 
       if (!isFunction(this.render)) {
@@ -458,7 +533,8 @@
           this.template = outHTML(el);
         }
 
-        this.render = createRenderFactroy(template);
+        // 根据template生成render函数
+        this.render = createRenderFactroy(this.template);
       }
 
       // 一切准备好了以后，挂载
