@@ -4,7 +4,7 @@ export default function (tagName, attrs, children) {
   // 先不考虑自定义组件
   const node = document.createElement(tagName);
 
-  let directive = [], textBind = [];
+  let directive = [], event = [], textBind = [];
 
   attrs = attrs || {};
   for (let key in attrs) {
@@ -13,14 +13,18 @@ export default function (tagName, attrs, children) {
     if (/^v-/.test(key)) {
       directive.push({
         el: node,
-        directiveName: key,
-        directiveValue: attrs[key]
+        name: key,
+        value: attrs[key]
       });
     }
 
     // 结点事件
     else if (/^@/.test(key)) {
-      console.warn("[事件]]" + key + ":" + attrs[key]);
+      event.push({
+        el: node,
+        name: key,
+        value: attrs[key]
+      });
     }
 
     // 普通属性
@@ -60,6 +64,11 @@ export default function (tagName, attrs, children) {
         directive.push(childNode.directive[i]);
       }
 
+      // 合并指令
+      for (let i = 0; i < childNode.event.length; i++) {
+        event.push(childNode.event[i]);
+      }
+
       // 合并文本结点
       for (let i = 0; i < childNode.textBind.length; i++) {
         textBind.push(childNode.textBind[i]);
@@ -74,6 +83,7 @@ export default function (tagName, attrs, children) {
   return {
     el: node,
     directive,
-    textBind
+    textBind,
+    event
   };
 };

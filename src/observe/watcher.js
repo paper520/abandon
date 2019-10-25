@@ -16,6 +16,12 @@ export default function (abandon, update) {
   // 第一次更新
   update.call(abandon);
 
+  // 挂载事件
+  let events = abandon.vnode.event;
+  for (let i = 0; i < events.length; i++) {
+    abandon._bind(events[i].el, events[i].name.replace(/^@/, ""), events[i].value);
+  }
+
   // 注册数据改变的时候触发更新
   for (let key in abandon.data) {
     let value = get(abandon.data, key);

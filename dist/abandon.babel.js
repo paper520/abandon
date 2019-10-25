@@ -79,6 +79,34 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
   }
 
+  // 一个单纯的绑定事件方法
+  var bind = function bind(target, eventType, callback) {
+    if (window.attachEvent) {
+      target.attachEvent("on" + eventType, callback); // 后绑定的先执行
+    } else {
+      target.addEventListener(eventType, callback, false); // 捕获
+    }
+  };
+
+  function eventsMixin(Abandon) {
+
+    // 具体的绑定@event事件的方法
+    Abandon.prototype._bind = function (el, type, callbackTemplate) {
+      var _this = this;
+
+      // 方法名称
+      var callback_name = callbackTemplate.replace(/\([^)]{0,}\)/, '');
+
+      // 绑定
+      bind(el, type, function () {
+
+        // 执行方法
+        // 帮助：默认参数等参数问题目前没有考虑
+        _this.methods[callback_name].apply(_this);
+      });
+    };
+  }
+
   /**
    * 判断一个值是不是String。
    *
@@ -98,6 +126,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     var node = document.createElement(tagName);
 
     var directive = [],
+        event = [],
         textBind = [];
 
     attrs = attrs || {};
@@ -107,14 +136,18 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       if (/^v-/.test(key)) {
         directive.push({
           el: node,
-          directiveName: key,
-          directiveValue: attrs[key]
+          name: key,
+          value: attrs[key]
         });
       }
 
       // 结点事件
       else if (/^@/.test(key)) {
-          console.warn("[事件]]" + key + ":" + attrs[key]);
+          event.push({
+            el: node,
+            name: key,
+            value: attrs[key]
+          });
         }
 
         // 普通属性
@@ -151,9 +184,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
           directive.push(childNode.directive[_i]);
         }
 
+        // 合并指令
+        for (var _i2 = 0; _i2 < childNode.event.length; _i2++) {
+          event.push(childNode.event[_i2]);
+        }
+
         // 合并文本结点
-        for (var _i2 = 0; _i2 < childNode.textBind.length; _i2++) {
-          textBind.push(childNode.textBind[_i2]);
+        for (var _i3 = 0; _i3 < childNode.textBind.length; _i3++) {
+          textBind.push(childNode.textBind[_i3]);
         }
       }
 
@@ -164,7 +202,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return {
       el: node,
       directive: directive,
-      textBind: textBind
+      textBind: textBind,
+      event: event
     };
   }
 
@@ -313,6 +352,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     // 第一次更新
     update.call(abandon);
+
+    // 挂载事件
+    var events = abandon.vnode.event;
+    for (var i = 0; i < events.length; i++) {
+      abandon._bind(events[i].el, events[i].name.replace(/^@/, ""), events[i].value);
+    }
 
     // 注册数据改变的时候触发更新
 
@@ -474,8 +519,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 记录属性
       var attrs = {};
-      for (var _i3 = 0; _i3 < node.attributes.length; _i3++) {
-        attrs[node.attributes[_i3].nodeName] = node.attributes[_i3].nodeValue;
+      for (var _i4 = 0; _i4 < node.attributes.length; _i4++) {
+        attrs[node.attributes[_i4].nodeName] = node.attributes[_i4].nodeValue;
       }
 
       // 返回生成的元素
@@ -511,6 +556,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
   // 混淆进入最基本的方法
   initMixin(Abandon);
+
+  // 混淆事件相关方法
+  eventsMixin(Abandon);
 
   // 混淆进去生命周期相关方法
   lifecycleMixin(Abandon);
