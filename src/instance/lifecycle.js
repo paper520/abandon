@@ -4,12 +4,13 @@ import isFunction from '@yelloxing/core.js/isFunction';
 export function lifecycleMixin(Abandon) {
 
   Abandon.prototype._update = function () {
+
     if (isFunction(this.beforeUpdate)) {
       this.beforeUpdate.call(this);
     }
 
     // 更新DOM
-    this._update();
+    this._refurbish();
 
     if (isFunction(this.updated)) {
       this.updated.call(this);

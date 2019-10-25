@@ -1,5 +1,5 @@
 /*!
-* abandon v0.1.4-alpha
+* abandon v0.2.0-alpha
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -316,12 +316,13 @@
     function lifecycleMixin(Abandon) {
 
       Abandon.prototype._update = function () {
+
         if (isFunction(this.beforeUpdate)) {
           this.beforeUpdate.call(this);
         }
 
         // 更新DOM
-        this._update();
+        this._refurbish();
 
         if (isFunction(this.updated)) {
           this.updated.call(this);
@@ -345,7 +346,7 @@
 
     function renderMixin(Abandon) {
 
-      Abandon.prototype._update = function () {
+      Abandon.prototype._refurbish = function () {
         let _this = this;
 
         // 更新文本结点

@@ -2,7 +2,7 @@ import get from '@yelloxing/core.js/get';
 
 export function renderMixin(Abandon) {
 
-  Abandon.prototype._update = function () {
+  Abandon.prototype._refurbish = function () {
     let _this = this;
 
     // 更新文本结点
