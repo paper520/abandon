@@ -17,7 +17,7 @@
     </h2>
     {{data.message}}
     |
-    <span v-bind='message'></span>
+    <span v-bind='data.message'></span>
     <h2>
       2.事件
     </h2>
@@ -26,7 +26,7 @@
     <h2>
       3.双向绑定
     </h2>
-    <input type="text" v-model='message'>
+    <input type="text" v-model='data.message'>
   </div>
   <script>
     window.vm = new Abandon({

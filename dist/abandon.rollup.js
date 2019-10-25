@@ -1,5 +1,5 @@
 /*!
-* abandon v0.2.0-alpha
+* abandon v0.2.1
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -78,14 +78,71 @@
 
     }
 
+    /**
+     * 判断一个值是不是一个朴素的'对象'
+     *
+     * @private
+     * @param {*} value 需要判断类型的值
+     * @returns {boolean} 如果是朴素的'对象'返回true，否则返回false
+     */
+
+    function isPlainObject (value) {
+        if (value === null || typeof value !== 'object' || getType(value) != '[object Object]') {
+            return false;
+        }
+
+        // 如果原型为null
+        if (Object.getPrototypeOf(value) === null) {
+            return true;
+        }
+
+        let proto = value;
+        while (Object.getPrototypeOf(proto) !== null) {
+            proto = Object.getPrototypeOf(proto);
+        }
+        return Object.getPrototypeOf(value) === proto;
+    }
+
+    /**
+     * 判断一个值是不是结点元素。
+     *
+     * @since V0.1.2
+     * @public
+     * @param {*} value 需要判断类型的值
+     * @returns {boolean} 如果是结点元素返回true，否则返回false
+     */
+    function isElement (value) {
+        return value !== null && typeof value === 'object' &&
+            (value.nodeType === 1 || value.nodeType === 9 || value.nodeType === 11) &&
+            !isPlainObject(value);
+    }
+
+    function outHTML(el) {
+      if (el.outerHTML) {
+        return el.outerHTML;
+      } else {
+        const container = document.createElement('div');
+        container.appendChild(el.cloneNode(true));
+        return container.innerHTML;
+      }
+    }function toNode(template) {
+      if (isElement(template)) {
+        return template;
+      }
+
+      // 如果是字符串模板
+      const container = document.createElement('div');
+      container.innerHTML = template;
+      return container.firstElementChild;
+    }
     // 一个单纯的绑定事件方法
-    let bind = function (target, eventType, callback) {
+    function bind (target, eventType, callback) {
       if (window.attachEvent) {
         target.attachEvent("on" + eventType, callback); // 后绑定的先执行
       } else {
         target.addEventListener(eventType, callback, false);// 捕获
       }
-    };
+    }
 
     function eventsMixin(Abandon) {
 
@@ -134,7 +191,7 @@
         if (/^v-/.test(key)) {
           directive.push({
             el: node,
-            name: key,
+            name: key.replace('v-',''),
             value: attrs[key]
           });
         }
@@ -185,7 +242,7 @@
             directive.push(childNode.directive[i]);
           }
 
-          // 合并指令
+          // 合并事件
           for (let i = 0; i < childNode.event.length; i++) {
             event.push(childNode.event[i]);
           }
@@ -348,6 +405,22 @@
       // 获取虚拟结点
       abandon.vnode = abandon.render(createElement);
 
+      /*---------指令bind-----------*/
+      for (let i = 0; i < abandon.vnode.directive.length; i++) {
+        let directive = abandon.vnode.directive[i];
+        if (isFunction(abandon.$directive[directive.name].bind)) {
+          abandon.$directive[directive.name].bind.call(
+            abandon.$directive[directive.name],
+            directive.el,
+            {
+              value: get(abandon, directive.value),
+              arg: directive.value,
+              target: abandon
+            }
+          );
+        }
+      }
+
       // 挂载真实结点到页面
       let newEl = abandon.vnode.el;
       newEl.setAttribute('uid', abandon._uid);
@@ -355,6 +428,23 @@
 
       // 第一次更新
       update.call(abandon);
+
+
+      /*---------指令inserted-----------*/
+      for (let i = 0; i < abandon.vnode.directive.length; i++) {
+        let directive = abandon.vnode.directive[i];
+        if (isFunction(abandon.$directive[directive.name].inserted)) {
+          abandon.$directive[directive.name].inserted.call(
+            abandon.$directive[directive.name],
+            directive.el,
+            {
+              value: get(abandon, directive.value),
+              arg: directive.value,
+              target: abandon
+            }
+          );
+        }
+      }
 
       // 挂载事件
       let events = abandon.vnode.event;
@@ -374,6 +464,22 @@
           set(newValue) {
             value = newValue;
             update.call(abandon);
+
+            /*---------指令update-----------*/
+            for (let i = 0; i < abandon.vnode.directive.length; i++) {
+              let directive = abandon.vnode.directive[i];
+              if (isFunction(abandon.$directive[directive.name].update)) {
+                abandon.$directive[directive.name].update.call(
+                  abandon.$directive[directive.name],
+                  directive.el,
+                  {
+                    value: get(abandon, directive.value),
+                    arg: directive.value,
+                    target: abandon
+                  }
+                );
+              }
+            }
           }
         });
       }
@@ -412,64 +518,6 @@
     }
 
     /**
-     * 判断一个值是不是一个朴素的'对象'
-     *
-     * @private
-     * @param {*} value 需要判断类型的值
-     * @returns {boolean} 如果是朴素的'对象'返回true，否则返回false
-     */
-
-    function isPlainObject (value) {
-        if (value === null || typeof value !== 'object' || getType(value) != '[object Object]') {
-            return false;
-        }
-
-        // 如果原型为null
-        if (Object.getPrototypeOf(value) === null) {
-            return true;
-        }
-
-        let proto = value;
-        while (Object.getPrototypeOf(proto) !== null) {
-            proto = Object.getPrototypeOf(proto);
-        }
-        return Object.getPrototypeOf(value) === proto;
-    }
-
-    /**
-     * 判断一个值是不是结点元素。
-     *
-     * @since V0.1.2
-     * @public
-     * @param {*} value 需要判断类型的值
-     * @returns {boolean} 如果是结点元素返回true，否则返回false
-     */
-    function isElement (value) {
-        return value !== null && typeof value === 'object' &&
-            (value.nodeType === 1 || value.nodeType === 9 || value.nodeType === 11) &&
-            !isPlainObject(value);
-    }
-
-    function outHTML(el) {
-      if (el.outerHTML) {
-        return el.outerHTML;
-      } else {
-        const container = document.createElement('div');
-        container.appendChild(el.cloneNode(true));
-        return container.innerHTML;
-      }
-    }function toNode(template) {
-      if (isElement(template)) {
-        return template;
-      }
-
-      // 如果是字符串模板
-      const container = document.createElement('div');
-      container.innerHTML = template;
-      return container.firstElementChild;
-    }
-
-    /**
      * 判断一个值是不是文本结点。
      *
      * @since V0.1.2
@@ -486,15 +534,19 @@
 
       // 第一次或数据改变的时候，更新页面
       Abandon.prototype._refurbish = function () {
-        let _this = this;
 
         // 更新文本结点
         const textBinds = this.vnode.textBind;
         for (let i = 0; i < textBinds.length; i++) {
-          let text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
-            let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+
+          // 解析{{message}}这样的值
+          // 目前只支持这种单一的方式
+          let text = textBinds[i].text.replace(/{{[^}]+}}/g, oldValue => {
+            let value = get(this, oldValue.replace('{{', '').replace('}}', ""));
             return value;
           });
+
+          // 替换文本结点
           let newEl = document.createTextNode(text);
           textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
           textBinds[i].el = newEl;
@@ -570,6 +622,150 @@
 
     // 混淆渲染组件的方法
     renderMixin(Abandon);
+
+    var bind$1 = {
+      bind: function (el, binding) {
+        el.value = el.textContent = binding.value;
+      },
+      update: function (el, binding) {
+        el.value = el.textContent = binding.value;
+      }
+    };
+
+    /**
+     * 设置值的基本方法（没有进行值检查）
+     *
+     * @private
+     * @param {Object} object 设置的对象
+     * @param {string} key 需要设置的属性
+     * @param {*} value 设置的值
+     */
+    function baseAssignValue (object, key, value) {
+        if (key == '__proto__') {
+            Object.defineProperty(object, key, {
+                'configurable': true,
+                'enumerable': true,
+                'value': value,
+                'writable': true
+            });
+        } else {
+            object[key] = value;
+        }
+    }
+
+    /**
+     *设置对象的值
+     *
+     * @private
+     * @param {Object} object 设置的对象
+     * @param {string} key 需要设置的属性
+     * @param {*} value 设置的值
+     */
+    function assignValue (object, key, value) {
+        baseAssignValue(object, key, value);
+    }
+
+    /**
+     * 设置一个对象属性值的基础方法。
+     *
+     * @private
+     * @param {Object} object 设置的对象
+     * @param {Array|string} path 对象上设置值的路径
+     * @param {*} value 设置的值
+     * @param {*} customizer 可选，一个函数，用于返回补充的类型（比如[],{}等）
+     * @returns {Object} 返回一个对象
+     */
+    function baseSet (object, path, value, customizer) {
+        if (!isObject(object)) {
+            return object;
+        }
+        path = castPath(path, object);
+
+        let nested = object;
+
+        for (let index = 0; index < path.length; index++) {
+            const key = toKey(path[index]);
+            let newValue = value;
+
+            // 如果不是最后一个，需要一些检测
+            if (index + 1 != path.length) {
+
+                const objValue = nested[key];
+
+                // 可能有的时候，原来的对象层次不足，需要补充，这里是选择应该补充什么类型
+                if (!isObject(objValue)) {
+
+                    newValue = customizer ? customizer(objValue, key, nested) : undefined;
+                    if (newValue === undefined) {
+                        newValue = {};
+                    }
+                } else {
+                    newValue = objValue;
+                }
+            }
+
+            assignValue(nested, key, newValue);
+            nested = nested[key];
+        }
+
+        return object;
+    }
+
+    /**
+     * 设置object的属性path的新值，返回设置后的对象。
+     *
+     * @since V0.1.0
+     * @public
+     * @param {Object} object 设置的对象
+     * @param {Array|string} path 对象上设置值的路径
+     * @param {*} value 设置的值
+     * @param {*} customizer 可选，一个函数，用于返回补充的类型（比如[],{}等）
+     * @returns {Object} 返回一个对象
+     * @example
+     *
+     * var object={a:{b:[1,2,3]}};
+     *
+     * set(object,'a.b.c',10)
+     * // {a:{b:[1,2,3]}}
+     */
+    function set (object, path, value, customizer) {
+        customizer = typeof customizer === 'function' ? customizer : undefined;
+        return object == null ? object : baseSet(object, path, value, customizer);
+    }
+
+    var model = {
+      bind: function (el, binding) {
+        el.value = binding.value;
+        bind(el, 'input', () => {
+          set(binding.target, binding.arg, el.value);
+        });
+      },
+      update: function (el, binding) {
+        el.value = binding.value;
+      }
+    };
+
+    function initGlobalAPI (Abandon) {
+
+      // 注册指令方法
+      /**
+       * bind
+       * inserted
+       * update
+       */
+      Abandon.prototype.$directive = {};
+      Abandon.directive = function (name, config) {
+        Abandon.prototype.$directive[name] = config;
+      };
+
+      // 注册内部指令
+      Abandon.directive('bind', bind$1);
+      Abandon.directive('model', model);
+
+    }
+
+    // 挂载全局的静态方法
+    initGlobalAPI(Abandon);
 
     Abandon.prototype.$mount = function (el) {
 

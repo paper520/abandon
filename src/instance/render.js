@@ -4,15 +4,19 @@ export function renderMixin(Abandon) {
 
   // 第一次或数据改变的时候，更新页面
   Abandon.prototype._refurbish = function () {
-    let _this = this;
 
     // 更新文本结点
     const textBinds = this.vnode.textBind;
     for (let i = 0; i < textBinds.length; i++) {
-      let text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
-        let value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+
+      // 解析{{message}}这样的值
+      // 目前只支持这种单一的方式
+      let text = textBinds[i].text.replace(/{{[^}]+}}/g, oldValue => {
+        let value = get(this, oldValue.replace('{{', '').replace('}}', ""));
         return value;
       });
+
+      // 替换文本结点
       let newEl = document.createTextNode(text);
       textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
       textBinds[i].el = newEl;

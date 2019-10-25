@@ -13,7 +13,7 @@ export default function (tagName, attrs, children) {
     if (/^v-/.test(key)) {
       directive.push({
         el: node,
-        name: key,
+        name: key.replace('v-',''),
         value: attrs[key]
       });
     }
@@ -64,7 +64,7 @@ export default function (tagName, attrs, children) {
         directive.push(childNode.directive[i]);
       }
 
-      // 合并指令
+      // 合并事件
       for (let i = 0; i < childNode.event.length; i++) {
         event.push(childNode.event[i]);
       }

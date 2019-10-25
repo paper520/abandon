@@ -1,11 +1,4 @@
-// 一个单纯的绑定事件方法
-let bind = function (target, eventType, callback) {
-  if (window.attachEvent) {
-    target.attachEvent("on" + eventType, callback); // 后绑定的先执行
-  } else {
-    target.addEventListener(eventType, callback, false);// 捕获
-  }
-};
+import { bind } from '../_utils/tool';
 
 export function eventsMixin(Abandon) {
 

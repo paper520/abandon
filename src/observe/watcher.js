@@ -1,5 +1,6 @@
 import createElement from '../vnode/index';
 import get from '@yelloxing/core.js/get';
+import isFunction from '@yelloxing/core.js/isFunction';
 
 // 我们需要在这里挂载好结点
 // 同时编译（就是获取需要同步的数据、指令、组件等信息）
@@ -8,6 +9,22 @@ export default function (abandon, update) {
   // 获取虚拟结点
   abandon.vnode = abandon.render(createElement);
 
+  /*---------指令bind-----------*/
+  for (let i = 0; i < abandon.vnode.directive.length; i++) {
+    let directive = abandon.vnode.directive[i];
+    if (isFunction(abandon.$directive[directive.name].bind)) {
+      abandon.$directive[directive.name].bind.call(
+        abandon.$directive[directive.name],
+        directive.el,
+        {
+          value: get(abandon, directive.value),
+          arg: directive.value,
+          target: abandon
+        }
+      );
+    }
+  }
+
   // 挂载真实结点到页面
   let newEl = abandon.vnode.el;
   newEl.setAttribute('uid', abandon._uid);
@@ -15,6 +32,23 @@ export default function (abandon, update) {
 
   // 第一次更新
   update.call(abandon);
+
+
+  /*---------指令inserted-----------*/
+  for (let i = 0; i < abandon.vnode.directive.length; i++) {
+    let directive = abandon.vnode.directive[i];
+    if (isFunction(abandon.$directive[directive.name].inserted)) {
+      abandon.$directive[directive.name].inserted.call(
+        abandon.$directive[directive.name],
+        directive.el,
+        {
+          value: get(abandon, directive.value),
+          arg: directive.value,
+          target: abandon
+        }
+      );
+    }
+  }
 
   // 挂载事件
   let events = abandon.vnode.event;
@@ -34,6 +68,22 @@ export default function (abandon, update) {
       set(newValue) {
         value = newValue;
         update.call(abandon);
+
+        /*---------指令update-----------*/
+        for (let i = 0; i < abandon.vnode.directive.length; i++) {
+          let directive = abandon.vnode.directive[i];
+          if (isFunction(abandon.$directive[directive.name].update)) {
+            abandon.$directive[directive.name].update.call(
+              abandon.$directive[directive.name],
+              directive.el,
+              {
+                value: get(abandon, directive.value),
+                arg: directive.value,
+                target: abandon
+              }
+            );
+          }
+        }
       }
     });
   }
