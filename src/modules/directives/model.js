@@ -1,4 +1,4 @@
-import { bind } from '../../_utils/tool';
+import { bind } from '../../utils/tool';
 import set from '@yelloxing/core.js/set';
 
 export default {

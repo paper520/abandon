@@ -3,13 +3,49 @@
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 /*!
-* abandon v0.2.2
+* abandon v1.0.0
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
 
 (function () {
   'use strict';
+
+  /**
+   * =========================================
+   * 挂载全局指令，组件等全局方法
+   */
+
+  function initGlobalAPI(Abandon) {
+
+    Abandon.prototype.$directive = {};
+    // 挂载全局指令方法
+    // 指令options可配置项有：
+    //    1.bind（关联到结点触发）
+    //    2.inserted（关联的结点插入页面触发）
+    //    3.update（数据改变更新触发）
+    Abandon.directive = function (name, options) {
+      if (Abandon.prototype.$directive[name]) {
+        throw new Error('The directive has already been defined:v-' + name);
+      }
+      Abandon.prototype.$directive[name] = options;
+    };
+
+    Abandon.prototype.$component = {};
+    // 挂载全局组件方法
+    // 组件options可配置项等情况和Abandon对象一致
+    Abandon.component = function (name, options) {
+      if (Abandon.prototype.$component[name]) {
+        throw new Error('The component has already been defined:ui-' + name);
+      }
+      Abandon.prototype.$component[name] = options;
+    };
+
+    // 创建组件方法
+    Abandon.prototype._new = function (options) {
+      return new Abandon(options);
+    };
+  }
 
   var toString = Object.prototype.toString;
 
@@ -64,17 +100,21 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     // 对象初始化
     Abandon.prototype._init = function (options) {
 
-      var abandon = this;
-      abandon._uid = uid++;
+      this.$uid = uid++;
       options = options || {};
 
       for (var key in options) {
-        abandon[key] = options[key];
+        // 判断是不是_或者$开头的
+        // 这二个内部预留了
+        if (/^[_$]/.test(key)) {
+          throw new Error('The beginning of _and $is not allowed：' + key);
+        }
+        this[key] = options[key];
       }
 
       // 数据预处理
-      if (isFunction(abandon.data)) {
-        abandon.data = abandon.data.call(abandon);
+      if (isFunction(this.data)) {
+        this.data = this.data();
       }
     };
   }
@@ -116,6 +156,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return value !== null && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && (value.nodeType === 1 || value.nodeType === 9 || value.nodeType === 11) && !isPlainObject(value);
   }
 
+  /**
+   * =========================================
+   * 本文件用于提供一些零碎的方法
+   */
+
+  /**
+   * 获取结点的outHTML
+   * @param {node} el 结点
+   * @return {string} 字符串模板
+   */
   function outHTML(el) {
     if (el.outerHTML) {
       return el.outerHTML;
@@ -124,7 +174,13 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       container.appendChild(el.cloneNode(true));
       return container.innerHTML;
     }
-  }function toNode(template) {
+  }
+  /**
+   * 把字符串模板变成结点
+   * @param {node|string} template 结点或字符串模板
+   * @return {node} 结点
+   */
+  function toNode(template) {
     if (isElement(template)) {
       return template;
     }
@@ -134,7 +190,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     container.innerHTML = template;
     return container.firstElementChild;
   }
-  // 一个单纯的绑定事件方法
+  /**
+   * 一个单纯的绑定事件方法
+   * @param {dom} target 结点
+   * @param {string} eventType 浏览器事件，比如click,dblclick等
+   * @param {function} callback 回调函数
+   */
   function _bind(target, eventType, callback) {
     if (window.attachEvent) {
       target.attachEvent("on" + eventType, callback); // 后绑定的先执行
@@ -162,127 +223,34 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
   }
 
-  /**
-   * 判断一个值是不是String。
-   *
-   * @since V0.1.2
-   * @public
-   * @param {*} value 需要判断类型的值
-   * @returns {boolean} 如果是String返回true，否则返回false
-   */
-  function isString(value) {
-    var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
-    return type === 'string' || type === 'object' && value != null && !Array.isArray(value) && getType(value) === '[object String]';
-  }
+  function lifecycleMixin(Abandon) {
 
-  function createElement(tagName, attrs, children) {
+    // 生命周期调用钩子
+    // 整个过程，进行到对应时期，都需要调用一下这里对应的钩子
+    // 整合在一起的目的是方便维护
+    Abandon.prototype._lifecycle = function (callbackName) {
 
-    var node = document.createElement(tagName);
-
-    if (/ui\-/.test(tagName.toLowerCase())) {
-      // 如果是一个组件
-      // 子结点失去意义
-      return {
-        el: node,
-        tagName: tagName.toLowerCase(),
-        attrs: attrs,
-        directive: [],
-        textBind: [],
-        event: [],
-        component: []
-      };
-    }
-
-    var directive = [],
-        event = [],
-        textBind = [],
-        component = [];
-
-    attrs = attrs || {};
-    for (var key in attrs) {
-
-      // 指令
-      if (/^v-/.test(key)) {
-        directive.push({
-          el: node,
-          name: key.replace('v-', ''),
-          value: attrs[key]
-        });
+      // beforeCreate
+      if (isFunction(callbackName)) {
+        callbackName();
+        return;
       }
 
-      // 结点事件
-      else if (/^@/.test(key)) {
-          event.push({
-            el: node,
-            name: key,
-            value: attrs[key]
-          });
-        }
+      if ([
 
-        // 普通属性
-        else {
-            node.setAttribute(key, attrs[key]);
-          }
-    }
+      // 创建组件
+      'created',
 
-    // 迭代子孩子
-    children = children || [];
-    for (var i = 0; i < children.length; i++) {
-      var childNode = children[i];
+      // 挂载组件
+      'beforeMount', 'mounted',
 
-      // 如果是字符串，需要变成结点
-      if (isString(childNode)) {
-        var text = childNode;
+      // 更新组件
+      'beforeUpdate', 'updated',
 
-        // 空白、回车等完全空白的不记录
-        if (/^[\x20\t\r\n\f]{0,}$/.test(text)) {
-          continue;
-        }
-
-        childNode = {
-          el: document.createTextNode(text),
-          text: text
-        };
-
-        // 特殊的文本结点
-        textBind.push(childNode);
-      } else {
-
-        // 合并指令
-        for (var _i = 0; _i < childNode.directive.length; _i++) {
-          directive.push(childNode.directive[_i]);
-        }
-
-        // 合并事件
-        for (var _i2 = 0; _i2 < childNode.event.length; _i2++) {
-          event.push(childNode.event[_i2]);
-        }
-
-        // 合并组件
-        for (var _i3 = 0; _i3 < childNode.component.length; _i3++) {
-          component.push(childNode.component[_i3]);
-        }
-
-        // 合并文本结点
-        for (var _i4 = 0; _i4 < childNode.textBind.length; _i4++) {
-          textBind.push(childNode.textBind[_i4]);
-        }
+      // 销毁组件
+      'beforeDestroy', 'destroyed'].indexOf(callbackName) > -1 && isFunction(this[callbackName])) {
+        this[callbackName].call(this);
       }
-
-      if (childNode.tagName) {
-        component.push(childNode);
-      }
-
-      // 追加
-      node.appendChild(childNode.el);
-    }
-
-    return {
-      el: node,
-      directive: directive,
-      textBind: textBind,
-      event: event,
-      component: component
     };
   }
 
@@ -417,122 +385,167 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return result === undefined ? defaultValue : result;
   }
 
-  // 我们需要在这里挂载好结点
-  // 同时编译（就是获取需要同步的数据、指令、组件等信息）
-  function Watcher(abandon, update) {
+  /**
+   * 判断一个值是不是String。
+   *
+   * @since V0.1.2
+   * @public
+   * @param {*} value 需要判断类型的值
+   * @returns {boolean} 如果是String返回true，否则返回false
+   */
+  function isString(value) {
+    var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+    return type === 'string' || type === 'object' && value != null && !Array.isArray(value) && getType(value) === '[object String]';
+  }
 
-    // 获取虚拟结点
-    abandon.vnode = abandon.render(createElement);
+  /**
+   * 组件控制范围内的重要信息收集
+   * =========================================
+   * 备注：未来这里可能会修改成虚拟结点，进行优化
+   */
 
-    for (var i = 0; i < abandon.vnode.component.length; i++) {
-      var component = abandon.$component[abandon.vnode.component[i].tagName];
-      component.el = abandon.vnode.component[i].el;
-      component._pid = abandon._uid;
-      abandon.new(component);
+  /**
+   * 创建vnode方法，并收集信息
+   * @param {string} tagName 结点名称
+   * @param {json} attrs 属性
+   * @param {array[vnode|string]} children 孩子元素 
+   * @return {element} 返回vnode
+   */
+  function createElement(tagName, attrs, children) {
+
+    var node = document.createElement(tagName);
+
+    if (/ui\-/.test(tagName.toLowerCase())) {
+      // 如果是一个组件
+      // 子结点失去意义
+      return {
+        el: node,
+        tagName: tagName.toLowerCase(),
+        attrs: attrs,
+        directive: [],
+        textBind: [],
+        event: [],
+        component: []
+      };
     }
 
-    /*---------指令bind-----------*/
-    for (var _i5 = 0; _i5 < abandon.vnode.directive.length; _i5++) {
-      var directive = abandon.vnode.directive[_i5];
-      if (isFunction(abandon.$directive[directive.name].bind)) {
-        abandon.$directive[directive.name].bind.call(abandon.$directive[directive.name], directive.el, {
-          value: get(abandon, directive.value),
-          arg: directive.value,
-          target: abandon
+    var directive = [],
+        event = [],
+        textBind = [],
+        component = [];
+
+    attrs = attrs || {};
+    for (var key in attrs) {
+
+      // 指令
+      if (/^v-/.test(key)) {
+        directive.push({
+          el: node,
+          name: key.replace('v-', ''),
+          value: attrs[key]
         });
       }
+
+      // 结点事件
+      else if (/^@/.test(key)) {
+          event.push({
+            el: node,
+            name: key,
+            value: attrs[key]
+          });
+        }
+
+        // 普通属性
+        else {
+            node.setAttribute(key, attrs[key]);
+          }
     }
 
-    // 挂载真实结点到页面
-    var newEl = abandon.vnode.el;
-    newEl.setAttribute('uid', abandon._uid);
-    if (abandon._pid) {
-      newEl.setAttribute('pid', abandon._pid);
-    }
-    abandon.el.parentNode.replaceChild(newEl, abandon.el);
+    // 迭代子孩子
+    children = children || [];
+    for (var i = 0; i < children.length; i++) {
+      var childNode = children[i];
 
-    // 第一次更新
-    update.call(abandon);
+      // 如果是字符串，需要变成结点
+      if (isString(childNode)) {
+        var text = childNode;
 
-    /*---------指令inserted-----------*/
-    for (var _i6 = 0; _i6 < abandon.vnode.directive.length; _i6++) {
-      var _directive = abandon.vnode.directive[_i6];
-      if (isFunction(abandon.$directive[_directive.name].inserted)) {
-        abandon.$directive[_directive.name].inserted.call(abandon.$directive[_directive.name], _directive.el, {
-          value: get(abandon, _directive.value),
-          arg: _directive.value,
-          target: abandon
-        });
+        // 空白、回车等完全空白的不记录
+        if (/^[\x20\t\r\n\f]{0,}$/.test(text)) {
+          continue;
+        }
+
+        childNode = {
+          el: document.createTextNode(text),
+          text: text
+        };
+
+        // 特殊的文本结点
+        textBind.push(childNode);
+      } else {
+
+        // 合并指令
+        for (var _i = 0; _i < childNode.directive.length; _i++) {
+          directive.push(childNode.directive[_i]);
+        }
+
+        // 合并事件
+        for (var _i2 = 0; _i2 < childNode.event.length; _i2++) {
+          event.push(childNode.event[_i2]);
+        }
+
+        // 合并组件
+        for (var _i3 = 0; _i3 < childNode.component.length; _i3++) {
+          component.push(childNode.component[_i3]);
+        }
+
+        // 合并文本结点
+        for (var _i4 = 0; _i4 < childNode.textBind.length; _i4++) {
+          textBind.push(childNode.textBind[_i4]);
+        }
       }
+
+      if (childNode.tagName) {
+        component.push(childNode);
+      }
+
+      // 追加
+      node.appendChild(childNode.el);
     }
 
-    // 挂载事件
-    var events = abandon.vnode.event;
-    for (var _i7 = 0; _i7 < events.length; _i7++) {
-      abandon._bind(events[_i7].el, events[_i7].name.replace(/^@/, ""), events[_i7].value);
-    }
+    return {
+      el: node,
+      directive: directive,
+      textBind: textBind,
+      event: event,
+      component: component
+    };
+  }
 
-    // 注册数据改变的时候触发更新
-
+  function watcher(_this) {
     var _loop = function _loop(key) {
-      var value = get(abandon.data, key);
+      var value = get(_this.data, key);
 
       // 针对data进行拦截，后续对data的数据添加不会自动监听了
-      Object.defineProperty(abandon.data, key, {
+      Object.defineProperty(_this.data, key, {
         get: function get() {
           return value;
         },
         set: function set(newValue) {
-          value = newValue;
-          update.call(abandon);
+          _this._lifecycle('beforeUpdate');
 
-          /*---------指令update-----------*/
-          for (var _i8 = 0; _i8 < abandon.vnode.directive.length; _i8++) {
-            var _directive2 = abandon.vnode.directive[_i8];
-            if (isFunction(abandon.$directive[_directive2.name].update)) {
-              abandon.$directive[_directive2.name].update.call(abandon.$directive[_directive2.name], _directive2.el, {
-                value: get(abandon, _directive2.value),
-                arg: _directive2.value,
-                target: abandon
-              });
-            }
-          }
+          value = newValue;
+
+          // 数据改变，触发更新
+          _this._updateComponent();
+
+          _this._lifecycle('updated');
         }
       });
     };
 
-    for (var key in abandon.data) {
+    for (var key in _this.data) {
       _loop(key);
-    }
-  }
-
-  function lifecycleMixin(Abandon) {
-
-    Abandon.prototype._update = function () {
-
-      if (isFunction(this.beforeUpdate)) {
-        this.beforeUpdate.call(this);
-      }
-
-      // 更新DOM
-      this._refurbish();
-
-      if (isFunction(this.updated)) {
-        this.updated.call(this);
-      }
-    };
-  }
-  // 挂载组件
-  function mountComponent(abandon, el) {
-    if (isFunction(abandon.beforeMount)) {
-      abandon.beforeMount.call(abandon);
-    }
-
-    // 挂载并开始数据监听
-    new Watcher(abandon, abandon._update);
-
-    if (isFunction(abandon.mounted)) {
-      abandon.mounted.call(abandon);
     }
   }
 
@@ -548,33 +561,86 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return value !== null && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value.nodeType === 3 && !isPlainObject(value);
   }
 
+  // 更新{{}}的值
+  var refurbishTextBind = function refurbishTextBind(_this, textBinds) {
+    for (var i = 0; i < textBinds.length; i++) {
+
+      // 解析{{message}}这样的值
+      // 目前只支持这种单一的方式
+      var text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
+        var value = get(_this, oldValue.replace('{{', '').replace('}}', ""));
+        return value;
+      });
+
+      // 替换文本结点
+      var newEl = document.createTextNode(text);
+      textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
+      textBinds[i].el = newEl;
+    }
+  };
+
   function renderMixin(Abandon) {
 
-    // 第一次或数据改变的时候，更新页面
-    Abandon.prototype._refurbish = function () {
-      var _this2 = this;
+    // 根据render生成dom挂载到挂载点
+    // 并调用watcher启动数据监听
+    // 并调用events方法开启@事件注册
+    // 并记录其中的组件，指令和{{}}等
+    Abandon.prototype._mountComponent = function (el) {
 
-      // 更新文本结点
-      var textBinds = this.vnode.textBind;
-      for (var i = 0; i < textBinds.length; i++) {
+      // 获取虚拟结点
+      var vnode = this.render(createElement);
 
-        // 解析{{message}}这样的值
-        // 目前只支持这种单一的方式
-        var text = textBinds[i].text.replace(/{{[^}]+}}/g, function (oldValue) {
-          var value = get(_this2, oldValue.replace('{{', '').replace('}}', ""));
-          return value;
-        });
+      // 挂载真实结点到页面
+      var newEl = vnode.el;
+      this.el.parentNode.replaceChild(newEl, this.el);
+      this.el = newEl;
 
-        // 替换文本结点
-        var newEl = document.createTextNode(text);
-        textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
-        textBinds[i].el = newEl;
+      // 挂载好指令等需要update的时候维护的数据
+      this.$directiveE = vnode.directive;
+      this.$textBindE = vnode.textBind;
+
+      // 第一次主动更新{{}}的值
+      refurbishTextBind(this, this.$textBindE);
+
+      // 启动数据监听
+      watcher(this);
+
+      // 绑定事件
+      for (var i = 0; i < vnode.event.length; i++) {
+        this._bind(vnode.event[i].el, vnode.event[i].name.replace(/^@/, ''), vnode.event[i].value);
+      }
+
+      // 建立子组件
+      for (var _i5 = 0; _i5 < vnode.component.length; _i5++) {
+
+        // 获取我们注册的组件
+        var component = this.$component[vnode.component[_i5].tagName];
+
+        // 设置挂载点
+        component.el = vnode.component[_i5].el;
+
+        var newThis = this._new(component);
+
+        // 通过$pid把组件之间的父子关系挂起来，方便后期数据传递
+        newThis.$pid = this.$uid;
       }
     };
-  }
-  // 根据字符串模板生成render函数
-  function createRenderFactroy(template) {
 
+    // 第一次或数据改变的时候，更新页面
+    Abandon.prototype._updateComponent = function () {
+
+      // 更新{{}}的值
+      refurbishTextBind(this, this.$textBindE);
+
+      // 更新指令
+    };
+  }
+  /**
+   * 根据字符串模板生成render函数
+   * @param {string} template 字符串模板
+   * @return {function} render函数
+   */
+  function createRenderFactroy(template) {
     var doit = function doit(node, createElement) {
       var childNodes = node.childNodes,
           childRenders = [];
@@ -593,8 +659,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 记录属性
       var attrs = {};
-      for (var _i9 = 0; _i9 < node.attributes.length; _i9++) {
-        attrs[node.attributes[_i9].nodeName] = node.attributes[_i9].nodeValue;
+      for (var _i6 = 0; _i6 < node.attributes.length; _i6++) {
+        attrs[node.attributes[_i6].nodeName] = node.attributes[_i6].nodeValue;
       }
 
       // 返回生成的元素
@@ -606,39 +672,44 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
   }
 
+  /**
+   * =========================================
+   * Abandon对象
+   */
+
   function Abandon(options) {
     if (!(this instanceof Abandon)) {
       throw new Error('Abandon is a constructor and should be called with the `new` keyword');
     }
 
-    if (isFunction(options.beforeCreate)) {
-      options.beforeCreate.call();
-    }
+    this._lifecycle(options.beforeCreate);
 
     // 初始化对象
     this._init(options);
 
-    if (isFunction(this.created)) {
-      this.created.call(this);
-    }
+    this._lifecycle('created');
 
-    // 检查是否需要挂载到页面
+    // 如果没有设置挂载点
+    // 表示该组件不挂载
+    // 不挂载的话，render或template也不会去解析
+    // 或许可以在一定阶段以后，在主动去挂载，这样有益于提高效率
     if (isElement(this.el)) {
-      this.$mount(this.el);
+      this._lifecycle('beforeMount');
+
+      // 挂载组件到页面
+      this._mount(this.el);
+
+      this._lifecycle('mounted');
     }
   }
 
-  // 混淆进入最基本的方法
-  initMixin(Abandon);
-
-  // 混淆事件相关方法
-  eventsMixin(Abandon);
-
-  // 混淆进去生命周期相关方法
-  lifecycleMixin(Abandon);
-
-  // 混淆渲染组件的方法
-  renderMixin(Abandon);
+  /**
+   * 下面是混入几大核心功能的处理方法
+   */
+  initMixin(Abandon); // 初始化对象
+  eventsMixin(Abandon); // 处理事件相关
+  lifecycleMixin(Abandon); // 和组件的生命周期相关调用
+  renderMixin(Abandon); // 组件渲染或更新相关
 
   var bind$1 = {
     bind: function bind(el, binding) {
@@ -762,69 +833,42 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   };
 
-  function initGlobalAPI(Abandon) {
+  /**
+   * 备注：除非特殊情况，_开头的表示内置方法，$开头的表示内置资源
+   * =========================================
+   * 整合全部资源，对外暴露调用接口
+   */
 
-    // 注册指令方法
-    /**
-     * bind
-     * inserted
-     * update
-     */
-    Abandon.prototype.$directive = {};
-    Abandon.directive = function (name, config) {
-      Abandon.prototype.$directive[name] = config;
-    };
-
-    // 注册内部指令
-    Abandon.directive('bind', bind$1);
-    Abandon.directive('model', model);
-
-    // 注册组件方法
-    /**
-     * template
-     * data
-     * methods
-     * beforeCreate
-     * created
-     * beforeMount
-     * mounted
-     * beforeUpdate
-     * updated
-     * beforeDestroy
-     * destroyed
-     */
-    Abandon.prototype.$component = {};
-    Abandon.component = function (name, config) {
-      Abandon.prototype.$component[name] = config;
-    };
-
-    // 内部新建对象
-    Abandon.prototype.new = function (config) {
-      return new Abandon(config);
-    };
-  }
-
-  // 挂载全局的静态方法
+  // 挂载全局方法
   initGlobalAPI(Abandon);
 
-  Abandon.prototype.$mount = function (el) {
+  // 挂载内置指令
+  Abandon.directive("bind", bind$1); // v-bind单向绑定
+  Abandon.directive("model", model); // v-model双向绑定
+
+  // 把组件挂载到页面中去
+  Abandon.prototype._mount = function (el) {
 
     if (!isFunction(this.render)) {
+
+      var template = this.template;
+
       // 如果template没有设置或设置的不是字符串
-      if (!this.template || !isString(this.template)) {
+      if (!template || !isString(template)) {
 
         // 直接选择el
-        this.template = outHTML(el);
+        template = outHTML(el);
       }
 
       // 根据template生成render函数
-      this.render = createRenderFactroy(this.template);
+      this.render = createRenderFactroy(template);
     }
 
-    // 一切准备好了以后，挂载
-    mountComponent(this);
+    // 一切准备好了以后，正式挂载
+    this._mountComponent(el);
   };
 
+  // 根据运行环境，导出接口
   if ((typeof module === 'undefined' ? 'undefined' : _typeof(module)) === "object" && _typeof(module.exports) === "object") {
     module.exports = Abandon;
   } else {

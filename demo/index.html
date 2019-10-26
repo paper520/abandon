@@ -75,38 +75,38 @@
       },
 
       // 生命周期
-      // beforeCreate() {
-      //   console.log("beforeCreate");
-      //   console.warn(this);
-      // },
-      // created() {
-      //   console.log("created");
-      //   console.warn(this);
-      // },
-      // beforeMount() {
-      //   console.log("beforeMount");
-      //   console.warn(this);
-      // },
-      // mounted() {
-      //   console.log("mounted");
-      //   console.warn(this);
-      // },
-      beforeUpdate() {
-        console.log("beforeUpdate");
+      beforeCreate() {
+        console.log("beforeCreate");
         console.warn(this);
       },
-      // updated() {
-      //   console.log("updated");
-      //   console.warn(this);
-      // },
-      // beforeDestroy() {
-      //   console.log("beforeDestroy");
-      //   console.warn(this);
-      // },
-      // destroyed() {
-      //   console.log("destroyed");
-      //   console.warn(this);
-      // }
+      created() {
+        console.log("created");
+        console.warn(this);
+      },
+      beforeMount() {
+        console.log("beforeMount");
+        console.warn(this);
+      },
+      mounted() {
+        console.log("mounted");
+        console.warn(this.data.message);
+      },
+      beforeUpdate() {
+        console.log("beforeUpdate");
+        console.warn(this.data.message);
+      },
+      updated() {
+        console.log("updated");
+        console.warn(this.data.message);
+      },
+      beforeDestroy() {
+        console.log("beforeDestroy");
+        console.warn(this);
+      },
+      destroyed() {
+        console.log("destroyed");
+        console.warn(this);
+      }
     });
   </script>
 </body>

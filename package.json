@@ -1,6 +1,6 @@
 {
   "name": "abandon",
-  "version": "0.2.2",
+  "version": "1.0.0",
   "description": "📚 用于vue.js源码学习而开发的小型前端框架",
   "main": "./dist/abandon.min.js",
   "scripts": {
