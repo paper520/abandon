@@ -9,6 +9,13 @@ export default function (abandon, update) {
   // 获取虚拟结点
   abandon.vnode = abandon.render(createElement);
 
+  for (let i = 0; i < abandon.vnode.component.length; i++) {
+    let component = abandon.$component[abandon.vnode.component[i].tagName];
+    component.el = abandon.vnode.component[i].el;
+    component._pid = abandon._uid;
+    abandon.new(component);
+  }
+
   /*---------指令bind-----------*/
   for (let i = 0; i < abandon.vnode.directive.length; i++) {
     let directive = abandon.vnode.directive[i];
@@ -28,6 +35,9 @@ export default function (abandon, update) {
   // 挂载真实结点到页面
   let newEl = abandon.vnode.el;
   newEl.setAttribute('uid', abandon._uid);
+  if (abandon._pid) {
+    newEl.setAttribute('pid', abandon._pid);
+  }
   abandon.el.parentNode.replaceChild(newEl, abandon.el);
 
   // 第一次更新

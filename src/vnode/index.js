@@ -1,10 +1,23 @@
 import isString from '@yelloxing/core.js/isString';
 export default function (tagName, attrs, children) {
 
-  // 先不考虑自定义组件
   const node = document.createElement(tagName);
 
-  let directive = [], event = [], textBind = [];
+  if (/ui\-/.test(tagName.toLowerCase())) {
+    // 如果是一个组件
+    // 子结点失去意义
+    return {
+      el: node,
+      tagName: tagName.toLowerCase(),
+      attrs,
+      directive: [],
+      textBind: [],
+      event: [],
+      component: []
+    };
+  }
+
+  let directive = [], event = [], textBind = [], component = [];
 
   attrs = attrs || {};
   for (let key in attrs) {
@@ -13,7 +26,7 @@ export default function (tagName, attrs, children) {
     if (/^v-/.test(key)) {
       directive.push({
         el: node,
-        name: key.replace('v-',''),
+        name: key.replace('v-', ''),
         value: attrs[key]
       });
     }
@@ -69,11 +82,20 @@ export default function (tagName, attrs, children) {
         event.push(childNode.event[i]);
       }
 
+      // 合并组件
+      for (let i = 0; i < childNode.component.length; i++) {
+        component.push(childNode.component[i]);
+      }
+
       // 合并文本结点
       for (let i = 0; i < childNode.textBind.length; i++) {
         textBind.push(childNode.textBind[i]);
       }
 
+    }
+
+    if (childNode.tagName) {
+      component.push(childNode);
     }
 
     // 追加
@@ -84,6 +106,7 @@ export default function (tagName, attrs, children) {
     el: node,
     directive,
     textBind,
-    event
+    event,
+    component
   };
 };

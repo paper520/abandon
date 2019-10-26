@@ -25,11 +25,26 @@
     |
     <input type="button" value="鼠标进入" @mouseenter='doIt()'>
     <h2>
-      3.双向绑定
+      3.双向绑定<ui-demo></ui-demo>
     </h2>
     <input type="text" v-model='data.message'>
+
+    <!-- 4.组件 -->
+    <ui-demo></ui-demo>
   </div>
   <script>
+
+    // 自定义组件
+    Abandon.component('ui-demo', {
+      template: "<div><h2>组件用例</h2><p>{{data.message}}</p></div>",
+      data() {
+        return {
+          message: "组件中的数据"
+        };
+      }
+    });
+
+    // 建立主组件
     window.vm = new Abandon({
 
       // 挂载的结点
@@ -76,10 +91,10 @@
       //   console.log("mounted");
       //   console.warn(this);
       // },
-      // beforeUpdate() {
-      //   console.log("beforeUpdate");
-      //   console.warn(this);
-      // },
+      beforeUpdate() {
+        console.log("beforeUpdate");
+        console.warn(this);
+      },
       // updated() {
       //   console.log("updated");
       //   console.warn(this);

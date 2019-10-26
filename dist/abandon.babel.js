@@ -3,7 +3,7 @@
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 /*!
-* abandon v0.2.1
+* abandon v0.2.2
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -57,7 +57,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return type === '[object Function]' || type === '[object AsyncFunction]' || type === '[object GeneratorFunction]' || type === '[object Proxy]';
   }
 
-  var uid = 0;
+  var uid = 1;
 
   function initMixin(Abandon) {
 
@@ -177,12 +177,26 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
   function createElement(tagName, attrs, children) {
 
-    // 先不考虑自定义组件
     var node = document.createElement(tagName);
+
+    if (/ui\-/.test(tagName.toLowerCase())) {
+      // 如果是一个组件
+      // 子结点失去意义
+      return {
+        el: node,
+        tagName: tagName.toLowerCase(),
+        attrs: attrs,
+        directive: [],
+        textBind: [],
+        event: [],
+        component: []
+      };
+    }
 
     var directive = [],
         event = [],
-        textBind = [];
+        textBind = [],
+        component = [];
 
     attrs = attrs || {};
     for (var key in attrs) {
@@ -244,10 +258,19 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
           event.push(childNode.event[_i2]);
         }
 
-        // 合并文本结点
-        for (var _i3 = 0; _i3 < childNode.textBind.length; _i3++) {
-          textBind.push(childNode.textBind[_i3]);
+        // 合并组件
+        for (var _i3 = 0; _i3 < childNode.component.length; _i3++) {
+          component.push(childNode.component[_i3]);
         }
+
+        // 合并文本结点
+        for (var _i4 = 0; _i4 < childNode.textBind.length; _i4++) {
+          textBind.push(childNode.textBind[_i4]);
+        }
+      }
+
+      if (childNode.tagName) {
+        component.push(childNode);
       }
 
       // 追加
@@ -258,7 +281,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       el: node,
       directive: directive,
       textBind: textBind,
-      event: event
+      event: event,
+      component: component
     };
   }
 
@@ -400,9 +424,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     // 获取虚拟结点
     abandon.vnode = abandon.render(createElement);
 
+    for (var i = 0; i < abandon.vnode.component.length; i++) {
+      var component = abandon.$component[abandon.vnode.component[i].tagName];
+      component.el = abandon.vnode.component[i].el;
+      component._pid = abandon._uid;
+      abandon.new(component);
+    }
+
     /*---------指令bind-----------*/
-    for (var i = 0; i < abandon.vnode.directive.length; i++) {
-      var directive = abandon.vnode.directive[i];
+    for (var _i5 = 0; _i5 < abandon.vnode.directive.length; _i5++) {
+      var directive = abandon.vnode.directive[_i5];
       if (isFunction(abandon.$directive[directive.name].bind)) {
         abandon.$directive[directive.name].bind.call(abandon.$directive[directive.name], directive.el, {
           value: get(abandon, directive.value),
@@ -415,14 +446,17 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     // 挂载真实结点到页面
     var newEl = abandon.vnode.el;
     newEl.setAttribute('uid', abandon._uid);
+    if (abandon._pid) {
+      newEl.setAttribute('pid', abandon._pid);
+    }
     abandon.el.parentNode.replaceChild(newEl, abandon.el);
 
     // 第一次更新
     update.call(abandon);
 
     /*---------指令inserted-----------*/
-    for (var _i4 = 0; _i4 < abandon.vnode.directive.length; _i4++) {
-      var _directive = abandon.vnode.directive[_i4];
+    for (var _i6 = 0; _i6 < abandon.vnode.directive.length; _i6++) {
+      var _directive = abandon.vnode.directive[_i6];
       if (isFunction(abandon.$directive[_directive.name].inserted)) {
         abandon.$directive[_directive.name].inserted.call(abandon.$directive[_directive.name], _directive.el, {
           value: get(abandon, _directive.value),
@@ -434,8 +468,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     // 挂载事件
     var events = abandon.vnode.event;
-    for (var _i5 = 0; _i5 < events.length; _i5++) {
-      abandon._bind(events[_i5].el, events[_i5].name.replace(/^@/, ""), events[_i5].value);
+    for (var _i7 = 0; _i7 < events.length; _i7++) {
+      abandon._bind(events[_i7].el, events[_i7].name.replace(/^@/, ""), events[_i7].value);
     }
 
     // 注册数据改变的时候触发更新
@@ -453,8 +487,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
           update.call(abandon);
 
           /*---------指令update-----------*/
-          for (var _i6 = 0; _i6 < abandon.vnode.directive.length; _i6++) {
-            var _directive2 = abandon.vnode.directive[_i6];
+          for (var _i8 = 0; _i8 < abandon.vnode.directive.length; _i8++) {
+            var _directive2 = abandon.vnode.directive[_i8];
             if (isFunction(abandon.$directive[_directive2.name].update)) {
               abandon.$directive[_directive2.name].update.call(abandon.$directive[_directive2.name], _directive2.el, {
                 value: get(abandon, _directive2.value),
@@ -559,8 +593,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 记录属性
       var attrs = {};
-      for (var _i7 = 0; _i7 < node.attributes.length; _i7++) {
-        attrs[node.attributes[_i7].nodeName] = node.attributes[_i7].nodeValue;
+      for (var _i9 = 0; _i9 < node.attributes.length; _i9++) {
+        attrs[node.attributes[_i9].nodeName] = node.attributes[_i9].nodeValue;
       }
 
       // 返回生成的元素
@@ -728,8 +762,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   };
 
-  var component = {};
-
   function initGlobalAPI(Abandon) {
 
     // 注册指令方法
@@ -766,8 +798,10 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       Abandon.prototype.$component[name] = config;
     };
 
-    // 注册内部组件
-    Abandon.component('component', component);
+    // 内部新建对象
+    Abandon.prototype.new = function (config) {
+      return new Abandon(config);
+    };
   }
 
   // 挂载全局的静态方法

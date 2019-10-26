@@ -1,6 +1,6 @@
 import isFunction from '@yelloxing/core.js/isFunction';
 
-let uid = 0;
+let uid = 1;
 
 export function initMixin(Abandon) {
 

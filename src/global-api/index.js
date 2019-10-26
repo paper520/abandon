@@ -1,8 +1,6 @@
 import bind from './directives/v-bind';
 import model from './directives/v-model';
 
-import component from './components/component';
-
 export default function (Abandon) {
 
   // 注册指令方法
@@ -39,7 +37,9 @@ export default function (Abandon) {
     Abandon.prototype.$component[name] = config;
   };
 
-  // 注册内部组件
-  Abandon.component('component', component);
+  // 内部新建对象
+  Abandon.prototype.new=function(config){
+    return new Abandon(config);
+  };
 
 };

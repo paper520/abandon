@@ -1,5 +1,5 @@
 /*!
-* abandon v0.2.1
+* abandon v0.2.2
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -54,7 +54,7 @@
             type === '[object GeneratorFunction]' || type === '[object Proxy]';
     }
 
-    let uid = 0;
+    let uid = 1;
 
     function initMixin(Abandon) {
 
@@ -179,10 +179,23 @@
 
     function createElement (tagName, attrs, children) {
 
-      // 先不考虑自定义组件
       const node = document.createElement(tagName);
 
-      let directive = [], event = [], textBind = [];
+      if (/ui\-/.test(tagName.toLowerCase())) {
+        // 如果是一个组件
+        // 子结点失去意义
+        return {
+          el: node,
+          tagName: tagName.toLowerCase(),
+          attrs,
+          directive: [],
+          textBind: [],
+          event: [],
+          component: []
+        };
+      }
+
+      let directive = [], event = [], textBind = [], component = [];
 
       attrs = attrs || {};
       for (let key in attrs) {
@@ -191,7 +204,7 @@
         if (/^v-/.test(key)) {
           directive.push({
             el: node,
-            name: key.replace('v-',''),
+            name: key.replace('v-', ''),
             value: attrs[key]
           });
         }
@@ -247,11 +260,20 @@
             event.push(childNode.event[i]);
           }
 
+          // 合并组件
+          for (let i = 0; i < childNode.component.length; i++) {
+            component.push(childNode.component[i]);
+          }
+
           // 合并文本结点
           for (let i = 0; i < childNode.textBind.length; i++) {
             textBind.push(childNode.textBind[i]);
           }
 
+        }
+
+        if (childNode.tagName) {
+          component.push(childNode);
         }
 
         // 追加
@@ -262,7 +284,8 @@
         el: node,
         directive,
         textBind,
-        event
+        event,
+        component
       };
     }
 
@@ -405,6 +428,13 @@
       // 获取虚拟结点
       abandon.vnode = abandon.render(createElement);
 
+      for (let i = 0; i < abandon.vnode.component.length; i++) {
+        let component = abandon.$component[abandon.vnode.component[i].tagName];
+        component.el = abandon.vnode.component[i].el;
+        component._pid = abandon._uid;
+        abandon.new(component);
+      }
+
       /*---------指令bind-----------*/
       for (let i = 0; i < abandon.vnode.directive.length; i++) {
         let directive = abandon.vnode.directive[i];
@@ -424,6 +454,9 @@
       // 挂载真实结点到页面
       let newEl = abandon.vnode.el;
       newEl.setAttribute('uid', abandon._uid);
+      if (abandon._pid) {
+        newEl.setAttribute('pid', abandon._pid);
+      }
       abandon.el.parentNode.replaceChild(newEl, abandon.el);
 
       // 第一次更新
@@ -745,10 +778,6 @@
       }
     };
 
-    var component = {
-
-    };
-
     function initGlobalAPI (Abandon) {
 
       // 注册指令方法
@@ -785,8 +814,10 @@
         Abandon.prototype.$component[name] = config;
       };
 
-      // 注册内部组件
-      Abandon.component('component', component);
+      // 内部新建对象
+      Abandon.prototype.new=function(config){
+        return new Abandon(config);
+      };
 
     }
 
