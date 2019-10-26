@@ -16,9 +16,8 @@
     Abandon.prototype.$directive = {};
     // 挂载全局指令方法
     // 指令options可配置项有：
-    //    1.bind（关联到结点触发）
-    //    2.inserted（关联的结点插入页面触发）
-    //    3.update（数据改变更新触发）
+    //    1.inserted（关联的结点插入页面触发）
+    //    2.update（数据改变更新触发）
     Abandon.directive = function (name, options) {
       if (Abandon.prototype.$directive[name]) {
         throw new Error('The directive has already been defined:v-' + name);
@@ -586,6 +585,24 @@
     }
   };
 
+  // 触发指令中指定的生命周期钩子
+  let renderDirective = function (_this, directives, hookName) {
+    for (let i = 0; i < directives.length; i++) {
+      let directive = directives[i];
+      if (isFunction(_this.$directive[directive.name][hookName])) {
+        _this.$directive[directive.name][hookName].call(
+          _this.$directive[directive.name],
+          directive.el,
+          {
+            value: get(_this, directive.value),
+            arg: directive.value,
+            target: _this
+          }
+        );
+      }
+    }
+  };
+
   function renderMixin(Abandon) {
 
     // 根据render生成dom挂载到挂载点
@@ -608,6 +625,9 @@
 
       // 第一次主动更新{{}}的值
       refurbishTextBind(this, this.$textBindE);
+
+      // 指令inserted
+      renderDirective(this, this.$directiveE, 'inserted');
 
       // 启动数据监听
       watcher(this);
@@ -641,7 +661,8 @@
       // 更新{{}}的值
       refurbishTextBind(this, this.$textBindE);
 
-      // 更新指令
+      // 指令update
+      renderDirective(this, this.$directiveE, 'update');
 
     };
 
@@ -723,7 +744,7 @@
   renderMixin(Abandon);// 组件渲染或更新相关
 
   var bind$1 = {
-    bind: function (el, binding) {
+    inserted: function (el, binding) {
       el.value = el.textContent = binding.value;
     },
     update: function (el, binding) {
@@ -833,7 +854,7 @@
   }
 
   var model = {
-    bind: function (el, binding) {
+    inserted: function (el, binding) {
       el.value = binding.value;
       bind(el, 'input', () => {
         set(binding.target, binding.arg, el.value);

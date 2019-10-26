@@ -21,9 +21,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     Abandon.prototype.$directive = {};
     // 挂载全局指令方法
     // 指令options可配置项有：
-    //    1.bind（关联到结点触发）
-    //    2.inserted（关联的结点插入页面触发）
-    //    3.update（数据改变更新触发）
+    //    1.inserted（关联的结点插入页面触发）
+    //    2.update（数据改变更新触发）
     Abandon.directive = function (name, options) {
       if (Abandon.prototype.$directive[name]) {
         throw new Error('The directive has already been defined:v-' + name);
@@ -196,7 +195,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
    * @param {string} eventType 浏览器事件，比如click,dblclick等
    * @param {function} callback 回调函数
    */
-  function _bind(target, eventType, callback) {
+  function bind(target, eventType, callback) {
     if (window.attachEvent) {
       target.attachEvent("on" + eventType, callback); // 后绑定的先执行
     } else {
@@ -214,7 +213,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       var callback_name = callbackTemplate.replace(/\([^)]{0,}\)/, '');
 
       // 绑定
-      _bind(el, type, function () {
+      bind(el, type, function () {
 
         // 执行方法
         // 帮助：默认参数等参数问题目前没有考虑
@@ -579,6 +578,20 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   };
 
+  // 触发指令中指定的生命周期钩子
+  var renderDirective = function renderDirective(_this, directives, hookName) {
+    for (var i = 0; i < directives.length; i++) {
+      var directive = directives[i];
+      if (isFunction(_this.$directive[directive.name][hookName])) {
+        _this.$directive[directive.name][hookName].call(_this.$directive[directive.name], directive.el, {
+          value: get(_this, directive.value),
+          arg: directive.value,
+          target: _this
+        });
+      }
+    }
+  };
+
   function renderMixin(Abandon) {
 
     // 根据render生成dom挂载到挂载点
@@ -601,6 +614,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 第一次主动更新{{}}的值
       refurbishTextBind(this, this.$textBindE);
+
+      // 指令inserted
+      renderDirective(this, this.$directiveE, 'inserted');
 
       // 启动数据监听
       watcher(this);
@@ -632,7 +648,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       // 更新{{}}的值
       refurbishTextBind(this, this.$textBindE);
 
-      // 更新指令
+      // 指令update
+      renderDirective(this, this.$directiveE, 'update');
     };
   }
   /**
@@ -712,7 +729,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   renderMixin(Abandon); // 组件渲染或更新相关
 
   var bind$1 = {
-    bind: function bind(el, binding) {
+    inserted: function inserted(el, binding) {
       el.value = el.textContent = binding.value;
     },
     update: function update(el, binding) {
@@ -822,9 +839,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   }
 
   var model = {
-    bind: function bind(el, binding) {
+    inserted: function inserted(el, binding) {
       el.value = binding.value;
-      _bind(el, 'input', function () {
+      bind(el, 'input', function () {
         set(binding.target, binding.arg, el.value);
       });
     },

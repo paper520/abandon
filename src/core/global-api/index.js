@@ -7,9 +7,8 @@ export default function (Abandon) {
   Abandon.prototype.$directive = {};
   // 挂载全局指令方法
   // 指令options可配置项有：
-  //    1.bind（关联到结点触发）
-  //    2.inserted（关联的结点插入页面触发）
-  //    3.update（数据改变更新触发）
+  //    1.inserted（关联的结点插入页面触发）
+  //    2.update（数据改变更新触发）
   Abandon.directive = function (name, options) {
     if (Abandon.prototype.$directive[name]) {
       throw new Error('The directive has already been defined:v-' + name);

@@ -1,4 +1,5 @@
 import get from '@yelloxing/core.js/get';
+import isFunction from '@yelloxing/core.js/isFunction';
 
 // 更新{{}}的值
 let refurbishTextBind = function (_this, textBinds) {
@@ -15,6 +16,24 @@ let refurbishTextBind = function (_this, textBinds) {
     let newEl = document.createTextNode(text);
     textBinds[i].el.parentNode.replaceChild(newEl, textBinds[i].el);
     textBinds[i].el = newEl;
+  }
+};
+
+// 触发指令中指定的生命周期钩子
+let renderDirective = function (_this, directives, hookName) {
+  for (let i = 0; i < directives.length; i++) {
+    let directive = directives[i];
+    if (isFunction(_this.$directive[directive.name][hookName])) {
+      _this.$directive[directive.name][hookName].call(
+        _this.$directive[directive.name],
+        directive.el,
+        {
+          value: get(_this, directive.value),
+          arg: directive.value,
+          target: _this
+        }
+      );
+    }
   }
 };
 
@@ -43,6 +62,9 @@ export function renderMixin(Abandon) {
 
     // 第一次主动更新{{}}的值
     refurbishTextBind(this, this.$textBindE);
+
+    // 指令inserted
+    renderDirective(this, this.$directiveE, 'inserted');
 
     // 启动数据监听
     watcher(this);
@@ -76,7 +98,8 @@ export function renderMixin(Abandon) {
     // 更新{{}}的值
     refurbishTextBind(this, this.$textBindE);
 
-    // 更新指令
+    // 指令update
+    renderDirective(this, this.$directiveE, 'update');
 
   };
 
