@@ -3,7 +3,7 @@
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 /*!
-* abandon v1.0.0
+* abandon v1.0.1
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -91,6 +91,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     var type = getType(value);
     return type === '[object Function]' || type === '[object AsyncFunction]' || type === '[object GeneratorFunction]' || type === '[object Proxy]';
   }
+
+  /**
+   * 比如：检查参数是否合法，标记组件，部分数据需要预处理等基本操作
+   * =========================================
+   * 组件初始化
+   */
 
   var uid = 1;
 
@@ -203,6 +209,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   }
 
+  /**
+   * =========================================
+   * 事件相关的处理
+   */
+
   function eventsMixin(Abandon) {
 
     // 具体的绑定@event事件的方法
@@ -221,6 +232,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       });
     };
   }
+
+  /**
+   * =========================================
+   * 组件的生命周期
+   */
 
   function lifecycleMixin(Abandon) {
 
@@ -398,9 +414,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   }
 
   /**
-   * 组件控制范围内的重要信息收集
-   * =========================================
    * 备注：未来这里可能会修改成虚拟结点，进行优化
+   * =========================================
+   * 组件控制范围内的重要信息收集
    */
 
   /**
@@ -521,6 +537,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     };
   }
 
+  /**
+   * =========================================
+   * 通过proxy的方式，对this.data中的数据进行拦截
+   */
+
   function watcher(_this) {
     var _loop = function _loop(key) {
       var value = get(_this.data, key);
@@ -560,6 +581,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     return value !== null && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value.nodeType === 3 && !isPlainObject(value);
   }
 
+  /**
+   * =========================================
+   * 所有和视图渲染相关的处理都在这里
+   */
+
   // 更新{{}}的值
   var refurbishTextBind = function refurbishTextBind(_this, textBinds) {
     for (var i = 0; i < textBinds.length; i++) {
@@ -581,11 +607,19 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   // 触发指令中指定的生命周期钩子
   var renderDirective = function renderDirective(_this, directives, hookName) {
     for (var i = 0; i < directives.length; i++) {
-      var directive = directives[i];
-      if (isFunction(_this.$directive[directive.name][hookName])) {
-        _this.$directive[directive.name][hookName].call(_this.$directive[directive.name], directive.el, {
-          value: get(_this, directive.value),
-          arg: directive.value,
+      var directiveE = directives[i];
+      var directive = _this.$directive[directiveE.name];
+
+      // 如果指令没有注册
+      if (!directive) {
+        throw new Error('The directive is not registered:v-' + directiveE.name);
+      }
+
+      // 调用对应的生命周期钩子
+      if (isFunction(directive[hookName])) {
+        directive[hookName].call(directive, directiveE.el, {
+          value: get(_this, directiveE.value),
+          arg: directiveE.value,
           target: _this
         });
       }
@@ -630,7 +664,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       for (var _i5 = 0; _i5 < vnode.component.length; _i5++) {
 
         // 获取我们注册的组件
-        var component = this.$component[vnode.component[_i5].tagName];
+        var component = this.$component[vnode.component[_i5].tagName.replace(/^ui\-/, "")];
+
+        // 如果组件未定义
+        if (!component) {
+          throw new Error('The component is not registered:' + vnode.component[_i5].tagName);
+        }
 
         // 设置挂载点
         component.el = vnode.component[_i5].el;
@@ -727,6 +766,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   eventsMixin(Abandon); // 处理事件相关
   lifecycleMixin(Abandon); // 和组件的生命周期相关调用
   renderMixin(Abandon); // 组件渲染或更新相关
+
+  /**
+   * 用于数据单向绑定
+   * =========================================
+   * v-bind="express"
+   */
 
   var bind$1 = {
     inserted: function inserted(el, binding) {
@@ -837,6 +882,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     customizer = typeof customizer === 'function' ? customizer : undefined;
     return object == null ? object : baseSet(object, path, value, customizer);
   }
+
+  /**
+   * 用于数据双向绑定
+   * =========================================
+   * v-model="express"
+   */
 
   var model = {
     inserted: function inserted(el, binding) {

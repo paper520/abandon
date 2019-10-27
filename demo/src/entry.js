@@ -6,9 +6,8 @@ import 'promise-polyfill/src/polyfill';
 // 引入基础样式
 import '@yelloxing/normalize.css';
 
-// 注册全局组件
-import uiDemo from './components/ui-demo';
-Abandon.component('ui-demo', uiDemo);
+// 引入全局组件
+import './components/ui-demo';
 
 //根对象
 window.vm = new Abandon({

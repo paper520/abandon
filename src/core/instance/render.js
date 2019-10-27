@@ -27,14 +27,22 @@ let refurbishTextBind = function (_this, textBinds) {
 // 触发指令中指定的生命周期钩子
 let renderDirective = function (_this, directives, hookName) {
   for (let i = 0; i < directives.length; i++) {
-    let directive = directives[i];
-    if (isFunction(_this.$directive[directive.name][hookName])) {
-      _this.$directive[directive.name][hookName].call(
-        _this.$directive[directive.name],
-        directive.el,
+    let directiveE = directives[i];
+    let directive = _this.$directive[directiveE.name];
+
+    // 如果指令没有注册
+    if (!directive) {
+      throw new Error('The directive is not registered:v-' + directiveE.name);
+    }
+
+    // 调用对应的生命周期钩子
+    if (isFunction(directive[hookName])) {
+      directive[hookName].call(
+        directive,
+        directiveE.el,
         {
-          value: get(_this, directive.value),
-          arg: directive.value,
+          value: get(_this, directiveE.value),
+          arg: directiveE.value,
           target: _this
         }
       );
@@ -83,7 +91,12 @@ export function renderMixin(Abandon) {
     for (let i = 0; i < vnode.component.length; i++) {
 
       // 获取我们注册的组件
-      let component = this.$component[vnode.component[i].tagName];
+      let component = this.$component[vnode.component[i].tagName.replace(/^ui\-/, "")];
+
+      // 如果组件未定义
+      if (!component) {
+        throw new Error('The component is not registered:' + vnode.component[i].tagName);
+      }
 
       // 设置挂载点
       component.el = vnode.component[i].el;
