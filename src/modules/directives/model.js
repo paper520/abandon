@@ -1,3 +1,9 @@
+/**
+ * 用于数据双向绑定
+ * =========================================
+ * v-model="express"
+ */
+
 import { bind } from '../../utils/tool';
 import set from '@yelloxing/core.js/set';
 

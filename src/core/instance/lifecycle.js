@@ -1,3 +1,8 @@
+/**
+ * =========================================
+ * 组件的生命周期
+ */
+
 import isFunction from '@yelloxing/core.js/isFunction';
 
 export function lifecycleMixin(Abandon) {

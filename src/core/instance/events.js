@@ -1,3 +1,8 @@
+/**
+ * =========================================
+ * 事件相关的处理
+ */
+
 import { bind } from '../../utils/tool';
 
 export function eventsMixin(Abandon) {

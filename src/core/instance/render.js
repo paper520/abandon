@@ -1,3 +1,8 @@
+/**
+ * =========================================
+ * 所有和视图渲染相关的处理都在这里
+ */
+
 import get from '@yelloxing/core.js/get';
 import isFunction from '@yelloxing/core.js/isFunction';
 
