@@ -10,12 +10,19 @@ import Abandon from './core/instance/index';
 // 挂载全局方法
 initGlobalAPI(Abandon);
 
-import bind from './modules/directives/bind';
-import model from './modules/directives/model';
+import vBind from './modules/directives/bind';
+import vModel from './modules/directives/model';
 
 // 挂载内置指令
-Abandon.directive("bind", bind); // v-bind单向绑定
-Abandon.directive("model", model); // v-model双向绑定
+Abandon.directive("bind", vBind); // v-bind单向绑定
+Abandon.directive("model", vModel); // v-model双向绑定
+
+import uiComponent from './modules/components/component';
+import uiRouter from './modules/components/router';
+
+// 注册内置组件
+Abandon.component("component", uiComponent); // 动态组件
+Abandon.component("router", uiRouter); // 路由
 
 import { outHTML } from './utils/tool';
 import isString from '@yelloxing/core.js/isString';

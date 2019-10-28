@@ -87,6 +87,15 @@ export function renderMixin(Abandon) {
       this._bind(vnode.event[i].el, vnode.event[i].name.replace(/^@/, ''), vnode.event[i].value);
     }
 
+    // 如果最外层就是组件
+    if (vnode.tagName && /^ui\-/.test(vnode.tagName)) {
+      vnode.component = [{
+        el: vnode.el,
+        tagName: vnode.tagName,
+        attrs: vnode.attrs
+      }];
+    }
+
     // 建立子组件
     for (let i = 0; i < vnode.component.length; i++) {
 
@@ -146,6 +155,7 @@ export function createRenderFactroy(template) {
       else if (isElement(childNodes[i])) {
         childRenders.push(doit(childNodes[i], createElement));
       }
+      
     }
 
     // 记录属性

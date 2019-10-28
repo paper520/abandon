@@ -3,7 +3,7 @@
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 /*!
-* abandon v1.0.1
+* abandon v1.0.2-alpha
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -658,6 +658,15 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         this._bind(vnode.event[i].el, vnode.event[i].name.replace(/^@/, ''), vnode.event[i].value);
       }
 
+      // 如果最外层就是组件
+      if (vnode.tagName && /^ui\-/.test(vnode.tagName)) {
+        vnode.component = [{
+          el: vnode.el,
+          tagName: vnode.tagName,
+          attrs: vnode.attrs
+        }];
+      }
+
       // 建立子组件
       for (var _i5 = 0; _i5 < vnode.component.length; _i5++) {
 
@@ -771,7 +780,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
    * v-bind="express"
    */
 
-  var bind$1 = {
+  var vBind = {
     inserted: function inserted(el, binding) {
       el.value = el.textContent = binding.value;
     },
@@ -887,7 +896,7 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
    * v-model="express"
    */
 
-  var model = {
+  var vModel = {
     inserted: function inserted(el, binding) {
       el.value = binding.value;
       bind(el, 'input', function () {
@@ -897,6 +906,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     update: function update(el, binding) {
       el.value = binding.value;
     }
+  };
+
+  var uiComponent = {
+    template: "<div>动态组件开发中</div>"
+  };
+
+  var uiRouter = {
+    template: "<div>路由开发中</div>"
   };
 
   /**
@@ -909,8 +926,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   initGlobalAPI(Abandon);
 
   // 挂载内置指令
-  Abandon.directive("bind", bind$1); // v-bind单向绑定
-  Abandon.directive("model", model); // v-model双向绑定
+  Abandon.directive("bind", vBind); // v-bind单向绑定
+  Abandon.directive("model", vModel); // v-model双向绑定
+
+  // 注册内置组件
+  Abandon.component("component", uiComponent); // 动态组件
+  Abandon.component("router", uiRouter); // 路由
 
   // 把组件挂载到页面中去
   Abandon.prototype._mount = function (el) {
