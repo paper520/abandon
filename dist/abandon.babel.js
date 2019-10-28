@@ -485,18 +485,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       if (isString(childNode)) {
         var text = childNode;
 
-        // 空白、回车等完全空白的不记录
-        if (/^[\x20\t\r\n\f]{0,}$/.test(text)) {
-          continue;
-        }
-
         childNode = {
           el: document.createTextNode(text),
           text: text
         };
 
         // 特殊的文本结点
-        textBind.push(childNode);
+        // 如果不包含{{}}这样的，不需要记录
+        if (/{{[^}]+}}/.test(text)) {
+          textBind.push(childNode);
+        }
       } else {
 
         // 合并指令
