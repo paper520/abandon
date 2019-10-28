@@ -1,98 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-cn">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <link rel="shortcut icon" href="../logo.png">
-  <script src="../dist/abandon.babel.js"></script>
   <title>用例 | Abandon.js</title>
 </head>
 
 <body>
-  <div id='root'>
-    <h2>
-      1.单向绑定
-    </h2>
-    {{data.message}}
-    |
-    <span v-bind='message'></span>
-    <h2>
-      2.事件
-    </h2>
-    <input type="button" value="单击" @click='doIt()'>
-    <input type="button" value="双击" @dblclick='doIt()'>
-    <h2>
-      3.双向绑定
-    </h2>
-    <input type="text" v-model='message'>
-  </div>
-  <script>
-    window.vm = new Abandon({
 
-      // 挂载的结点
-      el: document.getElementById('root'),
+  <!-- 如果浏览器不支持js提示 -->
+  <noscript>
+    <strong>
+      很抱歉，如果没有 JavaScript 支持，Abandon 将不能正常工作。请启用浏览器的 JavaScript 然后继续。
+    </strong>
+  </noscript>
 
-      // 数据
-      data() {
-        return {
-          message: "Hello Abandon!"
-        };
-      },
+  <!-- 挂载结点 -->
+  <div id='root'></div>
 
-      // template: "<span>{{data.message}}</span>",
+  <!-- 打包文件 -->
+  <script src='./build/main.js'></script>
 
-      render: function (createElement) {
-        return createElement('span', {}, [
-          "{{data.message}}-{{data.message}}",
-          createElement("i", {
-            "class": "info"
-          }, ["={{data.message}}="])
-        ]);
-      },
-
-      methods: {
-        doIt() {
-          this.data.message = "[" + new Date() + "]" + this.data.message;
-        }
-      },
-
-      // 生命周期
-      beforeCreate() {
-        console.log("beforeCreate");
-        console.warn(this);
-      },
-      created() {
-        console.log("created");
-        console.warn(this);
-      },
-      beforeMount() {
-        console.log("beforeMount");
-        console.warn(this);
-      },
-      mounted() {
-        console.log("mounted");
-        console.warn(this);
-      },
-      beforeUpdate() {
-        console.log("beforeUpdate");
-        console.warn(this);
-      },
-      updated() {
-        console.log("updated");
-        console.warn(this);
-      },
-      beforeDestroy() {
-        console.log("beforeDestroy");
-        console.warn(this);
-      },
-      destroyed() {
-        console.log("destroyed");
-        console.warn(this);
-      }
-    });
-  </script>
 </body>
 
 </html>
