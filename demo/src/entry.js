@@ -13,6 +13,8 @@ import './page/App';
 let watermark = resolve => require(['./service/watermark'], resolve);
 new Promise(resolve => watermark(resolve)).then(callback => callback.default("Abandon 用例"));
 
+import router from './router/index';
+
 //根对象
 window.vm = new Abandon({
 
@@ -20,6 +22,9 @@ window.vm = new Abandon({
   el: document.getElementById('root'),
 
   // 配置启动方法
-  render: createElement => createElement('ui-app')
+  render: createElement => createElement('ui-app'),
+
+  // 启用路由(只有根对象才应该配置)
+  router
 
 });

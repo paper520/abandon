@@ -35,6 +35,17 @@ export function lifecycleMixin(Abandon) {
     ].indexOf(callbackName) > -1 && isFunction(this[callbackName])) {
       this[callbackName].call(this);
     }
+
+    if (this.$uid === 1 && callbackName === 'mounted') {
+
+      // 解析地址栏的路由
+      let routerString = (window.location.href + "#").split(/#\/{0,1}/)[1].replace(/\?.{0,}/, "").split('/');
+      for (let i = 0; i < routerString.length; i++) {
+        this.$router.push(routerString[i]);
+      }
+
+    }
+
   };
 
 };

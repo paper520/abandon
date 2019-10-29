@@ -2,10 +2,6 @@ import Abandon from 'abandon';
 Abandon.component('app', {
   template: `<ul>
 
-    <h2>
-    温馨提示：项目新功能研发中，敬请期待（怕麻烦，没有新建dev分支，我们会尽力早日完成升级，预计2019年11月5日前完成）
-    </h2>
-
     <!-- 主界面 -->
     <li class='main-view'>
         <ui-router></ui-router>
@@ -24,7 +20,10 @@ Abandon.component('app', {
   </ul>`,
   data() {
     return {
-      
+
     };
+  },
+  created() {
+    console.error('温馨提示：项目新功能研发中，敬请期待（怕麻烦，没有新建dev分支，我们会尽力早日完成升级，预计2019年11月5日前完成）');
   }
 });

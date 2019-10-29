@@ -104,6 +104,36 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     // 对象初始化
     Abandon.prototype._init = function (options) {
+      var _this2 = this;
+
+      if (options.router) {
+
+        // 只有根结点才可以挂载路由
+        if (uid !== 1) {
+          throw new Error('Only the root node can configure and enable router！');
+        }
+
+        // 因为配置了路由，我们需要挂载路由控制方法
+        var _this = this;
+        Abandon.prototype.$router = {
+          "states": [],
+          "reload": function reload() {
+            console.log(_this.$router.states);
+          },
+          "push": function push(state) {
+            _this.$router.states.push(state);
+            _this.$router.reload();
+          },
+          "pop": function pop() {
+            _this.$router.states.pop();
+            _this.$router.reload();
+          },
+          "goto": function goto(state) {
+            _this2.$router.states[_this2.$router.states.length] = state;
+            _this.$router.reload();
+          }
+        };
+      }
 
       this.$uid = uid++;
       options = options || {};
@@ -266,6 +296,15 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       'beforeDestroy', 'destroyed'].indexOf(callbackName) > -1 && isFunction(this[callbackName])) {
         this[callbackName].call(this);
       }
+
+      if (this.$uid === 1 && callbackName === 'mounted') {
+
+        // 解析地址栏的路由
+        var routerString = (window.location.href + "#").split(/#\/{0,1}/)[1].replace(/\?.{0,}/, "").split('/');
+        for (var i = 0; i < routerString.length; i++) {
+          this.$router.push(routerString[i]);
+        }
+      }
     };
   }
 
@@ -398,6 +437,107 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   function get(object, path, defaultValue) {
     var result = object == null ? undefined : baseGet(object, path);
     return result === undefined ? defaultValue : result;
+  }
+
+  /**
+   * 设置值的基本方法（没有进行值检查）
+   *
+   * @private
+   * @param {Object} object 设置的对象
+   * @param {string} key 需要设置的属性
+   * @param {*} value 设置的值
+   */
+  function baseAssignValue(object, key, value) {
+    if (key == '__proto__') {
+      Object.defineProperty(object, key, {
+        'configurable': true,
+        'enumerable': true,
+        'value': value,
+        'writable': true
+      });
+    } else {
+      object[key] = value;
+    }
+  }
+
+  /**
+   *设置对象的值
+   *
+   * @private
+   * @param {Object} object 设置的对象
+   * @param {string} key 需要设置的属性
+   * @param {*} value 设置的值
+   */
+  function assignValue(object, key, value) {
+    baseAssignValue(object, key, value);
+  }
+
+  /**
+   * 设置一个对象属性值的基础方法。
+   *
+   * @private
+   * @param {Object} object 设置的对象
+   * @param {Array|string} path 对象上设置值的路径
+   * @param {*} value 设置的值
+   * @param {*} customizer 可选，一个函数，用于返回补充的类型（比如[],{}等）
+   * @returns {Object} 返回一个对象
+   */
+  function baseSet(object, path, value, customizer) {
+    if (!isObject(object)) {
+      return object;
+    }
+    path = castPath(path, object);
+
+    var nested = object;
+
+    for (var index = 0; index < path.length; index++) {
+      var key = toKey(path[index]);
+      var newValue = value;
+
+      // 如果不是最后一个，需要一些检测
+      if (index + 1 != path.length) {
+
+        var objValue = nested[key];
+
+        // 可能有的时候，原来的对象层次不足，需要补充，这里是选择应该补充什么类型
+        if (!isObject(objValue)) {
+
+          newValue = customizer ? customizer(objValue, key, nested) : undefined;
+          if (newValue === undefined) {
+            newValue = {};
+          }
+        } else {
+          newValue = objValue;
+        }
+      }
+
+      assignValue(nested, key, newValue);
+      nested = nested[key];
+    }
+
+    return object;
+  }
+
+  /**
+   * 设置object的属性path的新值，返回设置后的对象。
+   *
+   * @since V0.1.0
+   * @public
+   * @param {Object} object 设置的对象
+   * @param {Array|string} path 对象上设置值的路径
+   * @param {*} value 设置的值
+   * @param {*} customizer 可选，一个函数，用于返回补充的类型（比如[],{}等）
+   * @returns {Object} 返回一个对象
+   * @example
+   *
+   * var object={a:{b:[1,2,3]}};
+   *
+   * set(object,'a.b.c',10)
+   * // {a:{b:[1,2,3]}}
+   */
+  function set(object, path, value, customizer) {
+    customizer = typeof customizer === 'function' ? customizer : undefined;
+    return object == null ? object : baseSet(object, path, value, customizer);
   }
 
   /**
@@ -681,6 +821,15 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         // 设置挂载点
         component.el = vnode.component[_i5].el;
 
+        // 设置props
+        if (Array.isArray(component.props)) {
+          var props = {};
+          for (var _i6 = 0; _i6 < component.props.length; _i6++) {
+            set(props, component.props[_i6], get(vnode.component[_i6].attrs, component.props[_i6]));
+          }
+          component.props = props;
+        }
+
         var newThis = this._new(component);
 
         // 通过$pid把组件之间的父子关系挂起来，方便后期数据传递
@@ -722,8 +871,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 记录属性
       var attrs = {};
-      for (var _i6 = 0; _i6 < node.attributes.length; _i6++) {
-        attrs[node.attributes[_i6].nodeName] = node.attributes[_i6].nodeValue;
+      for (var _i7 = 0; _i7 < node.attributes.length; _i7++) {
+        attrs[node.attributes[_i7].nodeName] = node.attributes[_i7].nodeValue;
       }
 
       // 返回生成的元素
@@ -790,107 +939,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   };
 
   /**
-   * 设置值的基本方法（没有进行值检查）
-   *
-   * @private
-   * @param {Object} object 设置的对象
-   * @param {string} key 需要设置的属性
-   * @param {*} value 设置的值
-   */
-  function baseAssignValue(object, key, value) {
-    if (key == '__proto__') {
-      Object.defineProperty(object, key, {
-        'configurable': true,
-        'enumerable': true,
-        'value': value,
-        'writable': true
-      });
-    } else {
-      object[key] = value;
-    }
-  }
-
-  /**
-   *设置对象的值
-   *
-   * @private
-   * @param {Object} object 设置的对象
-   * @param {string} key 需要设置的属性
-   * @param {*} value 设置的值
-   */
-  function assignValue(object, key, value) {
-    baseAssignValue(object, key, value);
-  }
-
-  /**
-   * 设置一个对象属性值的基础方法。
-   *
-   * @private
-   * @param {Object} object 设置的对象
-   * @param {Array|string} path 对象上设置值的路径
-   * @param {*} value 设置的值
-   * @param {*} customizer 可选，一个函数，用于返回补充的类型（比如[],{}等）
-   * @returns {Object} 返回一个对象
-   */
-  function baseSet(object, path, value, customizer) {
-    if (!isObject(object)) {
-      return object;
-    }
-    path = castPath(path, object);
-
-    var nested = object;
-
-    for (var index = 0; index < path.length; index++) {
-      var key = toKey(path[index]);
-      var newValue = value;
-
-      // 如果不是最后一个，需要一些检测
-      if (index + 1 != path.length) {
-
-        var objValue = nested[key];
-
-        // 可能有的时候，原来的对象层次不足，需要补充，这里是选择应该补充什么类型
-        if (!isObject(objValue)) {
-
-          newValue = customizer ? customizer(objValue, key, nested) : undefined;
-          if (newValue === undefined) {
-            newValue = {};
-          }
-        } else {
-          newValue = objValue;
-        }
-      }
-
-      assignValue(nested, key, newValue);
-      nested = nested[key];
-    }
-
-    return object;
-  }
-
-  /**
-   * 设置object的属性path的新值，返回设置后的对象。
-   *
-   * @since V0.1.0
-   * @public
-   * @param {Object} object 设置的对象
-   * @param {Array|string} path 对象上设置值的路径
-   * @param {*} value 设置的值
-   * @param {*} customizer 可选，一个函数，用于返回补充的类型（比如[],{}等）
-   * @returns {Object} 返回一个对象
-   * @example
-   *
-   * var object={a:{b:[1,2,3]}};
-   *
-   * set(object,'a.b.c',10)
-   * // {a:{b:[1,2,3]}}
-   */
-  function set(object, path, value, customizer) {
-    customizer = typeof customizer === 'function' ? customizer : undefined;
-    return object == null ? object : baseSet(object, path, value, customizer);
-  }
-
-  /**
    * 用于数据双向绑定
    * =========================================
    * v-model="express"
@@ -909,11 +957,13 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   };
 
   var uiComponent = {
-    template: "<div>动态组件开发中</div>"
+    template: "<div>动态组件开发中</div>",
+    created: function created() {}
   };
 
   var uiRouter = {
-    template: "<div>路由开发中</div>"
+    template: "<div>路由开发中</div>",
+    created: function created() {}
   };
 
   /**

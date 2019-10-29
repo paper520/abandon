@@ -4,6 +4,7 @@
  */
 
 import get from '@yelloxing/core.js/get';
+import set from '@yelloxing/core.js/set';
 import isFunction from '@yelloxing/core.js/isFunction';
 
 // 更新{{}}的值
@@ -110,6 +111,15 @@ export function renderMixin(Abandon) {
       // 设置挂载点
       component.el = vnode.component[i].el;
 
+      // 设置props
+      if (Array.isArray(component.props)) {
+        let props = {};
+        for (let i = 0; i < component.props.length; i++) {
+          set(props, component.props[i], get(vnode.component[i].attrs, component.props[i]));
+        }
+        component.props = props;
+      }
+
       let newThis = this._new(component);
 
       // 通过$pid把组件之间的父子关系挂起来，方便后期数据传递
@@ -155,7 +165,7 @@ export function createRenderFactroy(template) {
       else if (isElement(childNodes[i])) {
         childRenders.push(doit(childNodes[i], createElement));
       }
-      
+
     }
 
     // 记录属性
