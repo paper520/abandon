@@ -104,36 +104,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     // 对象初始化
     Abandon.prototype._init = function (options) {
-      var _this2 = this;
-
-      if (options.router) {
-
-        // 只有根结点才可以挂载路由
-        if (uid !== 1) {
-          throw new Error('Only the root node can configure and enable router！');
-        }
-
-        // 因为配置了路由，我们需要挂载路由控制方法
-        var _this = this;
-        Abandon.prototype.$router = {
-          "states": [],
-          "reload": function reload() {
-            console.log(_this.$router.states);
-          },
-          "push": function push(state) {
-            _this.$router.states.push(state);
-            _this.$router.reload();
-          },
-          "pop": function pop() {
-            _this.$router.states.pop();
-            _this.$router.reload();
-          },
-          "goto": function goto(state) {
-            _this2.$router.states[_this2.$router.states.length] = state;
-            _this.$router.reload();
-          }
-        };
-      }
 
       this.$uid = uid++;
       options = options || {};
@@ -252,13 +222,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 方法名称
       var callback_name = callbackTemplate.replace(/\([^)]{0,}\)/, '');
+      var callback_params = callbackTemplate.replace(/[^(]{1,}\({0,1}([^)]{0,})\){0,1}/, "$1").split(',');
 
       // 绑定
       bind(el, type, function () {
 
         // 执行方法
-        // 帮助：默认参数等参数问题目前没有考虑
-        _this.methods[callback_name].apply(_this);
+        // 目前不支持传递变量
+        _this.methods[callback_name].apply(_this, callback_params);
       });
     };
   }
@@ -295,15 +266,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       // 销毁组件
       'beforeDestroy', 'destroyed'].indexOf(callbackName) > -1 && isFunction(this[callbackName])) {
         this[callbackName].call(this);
-      }
-
-      if (this.$uid === 1 && callbackName === 'mounted') {
-
-        // 解析地址栏的路由
-        var routerString = (window.location.href + "#").split(/#\/{0,1}/)[1].replace(/\?.{0,}/, "").split('/');
-        for (var i = 0; i < routerString.length; i++) {
-          this.$router.push(routerString[i]);
-        }
       }
     };
   }
@@ -570,6 +532,12 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
     var node = document.createElement(tagName);
 
+    var directive = [],
+        event = [],
+        textBind = [],
+        component = [],
+        dynamicComponent = [];
+
     if (/ui\-/.test(tagName.toLowerCase())) {
       // 如果是一个组件
       // 子结点失去意义
@@ -580,14 +548,23 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         directive: [],
         textBind: [],
         event: [],
-        component: []
+        component: [],
+        dynamicComponent: []
       };
     }
 
-    var directive = [],
-        event = [],
-        textBind = [],
-        component = [];
+    // 如果是动态组件
+    // 特别标记一下
+    else if (tagName.toLowerCase() == 'component') {
+
+        // 如果是动态组件，孩子结点直接无视
+        children = [];
+
+        // 组件动态组件
+        dynamicComponent.push({
+          el: node
+        });
+      }
 
     attrs = attrs || {};
     for (var key in attrs) {
@@ -652,9 +629,14 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
           component.push(childNode.component[_i3]);
         }
 
+        // 合并动态组件
+        for (var _i4 = 0; _i4 < childNode.dynamicComponent.length; _i4++) {
+          dynamicComponent.push(childNode.dynamicComponent[_i4]);
+        }
+
         // 合并文本结点
-        for (var _i4 = 0; _i4 < childNode.textBind.length; _i4++) {
-          textBind.push(childNode.textBind[_i4]);
+        for (var _i5 = 0; _i5 < childNode.textBind.length; _i5++) {
+          textBind.push(childNode.textBind[_i5]);
         }
       }
 
@@ -671,7 +653,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       directive: directive,
       textBind: textBind,
       event: event,
-      component: component
+      component: component,
+      dynamicComponent: dynamicComponent
     };
   }
 
@@ -746,7 +729,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   var renderDirective = function renderDirective(_this, directives, hookName) {
     for (var i = 0; i < directives.length; i++) {
       var directiveE = directives[i];
-      var directive = _this.$directive[directiveE.name];
+      var names = (directiveE.name + ":").split(':');
+      var directive = _this.$directive[names[0]];
 
       // 如果指令没有注册
       if (!directive) {
@@ -758,9 +742,33 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
         directive[hookName].call(directive, directiveE.el, {
           value: get(_this, directiveE.value),
           arg: directiveE.value,
+          type: names[1],
           target: _this
         });
       }
+    }
+  };
+
+  // 挂载和更新动态组件
+  var refurbishDynamicComponent = function refurbishDynamicComponent(_this, dynamicComponents, isBind) {
+    for (var i = 0; i < dynamicComponents.length; i++) {
+      var dynamicComponent = dynamicComponents[i];
+
+      // 如果不是第一次，而且值没有改变
+      if (!isBind && dynamicComponent.el._dynamic_component_ == dynamicComponent.el.getAttribute('is')) {
+        continue;
+      } else {
+        // 如果是第一次，或is改变了
+        dynamicComponent.el._dynamic_component_ = dynamicComponent.el.getAttribute('is');
+      }
+
+      // 重新挂载组件
+      dynamicComponent.el.innerHTML = '<i></i>';
+      var targetEl = dynamicComponent.el.firstElementChild;
+
+      var options = JSON.parse(dynamicComponent.el._dynamic_component_);
+      options.el = targetEl;
+      _this._new(options);
     }
   };
 
@@ -783,12 +791,16 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       // 挂载好指令等需要update的时候维护的数据
       this.$directiveE = vnode.directive;
       this.$textBindE = vnode.textBind;
+      this.$dynamicComponent = vnode.dynamicComponent;
 
       // 第一次主动更新{{}}的值
       refurbishTextBind(this, this.$textBindE);
 
       // 指令inserted
       renderDirective(this, this.$directiveE, 'inserted');
+
+      // 第一次初始化动态组件
+      refurbishDynamicComponent(this, this.$dynamicComponent, true);
 
       // 启动数据监听
       watcher(this);
@@ -808,24 +820,24 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       }
 
       // 建立子组件
-      for (var _i5 = 0; _i5 < vnode.component.length; _i5++) {
+      for (var _i6 = 0; _i6 < vnode.component.length; _i6++) {
 
         // 获取我们注册的组件
-        var component = this.$component[vnode.component[_i5].tagName.replace(/^ui\-/, "")];
+        var component = this.$component[vnode.component[_i6].tagName.replace(/^ui\-/, "")];
 
         // 如果组件未定义
         if (!component) {
-          throw new Error('The component is not registered:' + vnode.component[_i5].tagName);
+          throw new Error('The component is not registered:' + vnode.component[_i6].tagName);
         }
 
         // 设置挂载点
-        component.el = vnode.component[_i5].el;
+        component.el = vnode.component[_i6].el;
 
         // 设置props
         if (Array.isArray(component.props)) {
           var props = {};
-          for (var _i6 = 0; _i6 < component.props.length; _i6++) {
-            set(props, component.props[_i6], get(vnode.component[_i6].attrs, component.props[_i6]));
+          for (var _i7 = 0; _i7 < component.props.length; _i7++) {
+            set(props, component.props[_i7], get(vnode.component[_i7].attrs, component.props[_i7]));
           }
           component.props = props;
         }
@@ -845,6 +857,9 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 指令update
       renderDirective(this, this.$directiveE, 'update');
+
+      // 更新动态组件
+      refurbishDynamicComponent(this, this.$dynamicComponent);
     };
   }
   /**
@@ -871,8 +886,8 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
       // 记录属性
       var attrs = {};
-      for (var _i7 = 0; _i7 < node.attributes.length; _i7++) {
-        attrs[node.attributes[_i7].nodeName] = node.attributes[_i7].nodeValue;
+      for (var _i8 = 0; _i8 < node.attributes.length; _i8++) {
+        attrs[node.attributes[_i8].nodeName] = node.attributes[_i8].nodeValue;
       }
 
       // 返回生成的元素
@@ -929,13 +944,26 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
    * v-bind="express"
    */
 
-  var vBind = {
-    inserted: function inserted(el, binding) {
-      el.value = el.textContent = binding.value;
-    },
-    update: function update(el, binding) {
+  var update = function update(el, binding) {
+
+    if (binding.value && !isString(binding.value)) {
+      binding.value = JSON.stringify(binding.value);
+    }
+
+    // 默认或者value类型，表示赋值
+    if (binding.type == '' || binding.type == 'value') {
       el.value = el.textContent = binding.value;
     }
+
+    // 负责设置属性
+    else {
+        el.setAttribute(binding.type, binding.value);
+      }
+  };
+
+  var vBind = {
+    inserted: update,
+    update: update
   };
 
   /**
@@ -956,16 +984,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
     }
   };
 
-  var uiComponent = {
-    template: "<div>动态组件开发中</div>",
-    created: function created() {}
-  };
-
-  var uiRouter = {
-    template: "<div>路由开发中</div>",
-    created: function created() {}
-  };
-
   /**
    * 备注：除非特殊情况，_开头的表示内置方法，$开头的表示内置资源
    * =========================================
@@ -978,10 +996,6 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   // 挂载内置指令
   Abandon.directive("bind", vBind); // v-bind单向绑定
   Abandon.directive("model", vModel); // v-model双向绑定
-
-  // 注册内置组件
-  Abandon.component("component", uiComponent); // 动态组件
-  Abandon.component("router", uiRouter); // 路由
 
   // 把组件挂载到页面中去
   Abandon.prototype._mount = function (el) {

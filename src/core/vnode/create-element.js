@@ -17,6 +17,10 @@ export default function (tagName, attrs, children) {
 
   const node = document.createElement(tagName);
 
+  let directive = [], event = [], textBind = [], component = [], dynamicComponent = [];
+
+  let isDynamicComponent = false;
+
   if (/ui\-/.test(tagName.toLowerCase())) {
     // 如果是一个组件
     // 子结点失去意义
@@ -27,11 +31,24 @@ export default function (tagName, attrs, children) {
       directive: [],
       textBind: [],
       event: [],
-      component: []
+      component: [],
+      dynamicComponent: []
     };
   }
 
-  let directive = [], event = [], textBind = [], component = [];
+  // 如果是动态组件
+  // 特别标记一下
+  else if (tagName.toLowerCase() == 'component') {
+    isDynamicComponent = true;
+
+    // 如果是动态组件，孩子结点直接无视
+    children = [];
+
+    // 组件动态组件
+    dynamicComponent.push({
+      el: node
+    });
+  }
 
   attrs = attrs || {};
   for (let key in attrs) {
@@ -99,6 +116,11 @@ export default function (tagName, attrs, children) {
         component.push(childNode.component[i]);
       }
 
+      // 合并动态组件
+      for (let i = 0; i < childNode.dynamicComponent.length; i++) {
+        dynamicComponent.push(childNode.dynamicComponent[i]);
+      }
+
       // 合并文本结点
       for (let i = 0; i < childNode.textBind.length; i++) {
         textBind.push(childNode.textBind[i]);
@@ -119,7 +141,8 @@ export default function (tagName, attrs, children) {
     directive,
     textBind,
     event,
-    component
+    component,
+    dynamicComponent
   };
 
 };

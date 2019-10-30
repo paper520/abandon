@@ -13,13 +13,14 @@ export function eventsMixin(Abandon) {
 
     // 方法名称
     let callback_name = callbackTemplate.replace(/\([^)]{0,}\)/, '');
+    let callback_params = callbackTemplate.replace(/[^(]{1,}\({0,1}([^)]{0,})\){0,1}/, "$1").split(',');
 
     // 绑定
     bind(el, type, function () {
 
       // 执行方法
-      // 帮助：默认参数等参数问题目前没有考虑
-      _this.methods[callback_name].apply(_this);
+      // 目前不支持传递变量
+      _this.methods[callback_name].apply(_this, callback_params);
     });
   };
 

@@ -102,36 +102,6 @@
     // 对象初始化
     Abandon.prototype._init = function (options) {
 
-      if (options.router) {
-
-        // 只有根结点才可以挂载路由
-        if (uid !== 1) {
-          throw new Error('Only the root node can configure and enable router！');
-        }
-
-        // 因为配置了路由，我们需要挂载路由控制方法
-        let _this = this;
-        Abandon.prototype.$router = {
-          "states": [],
-          "reload": () => {
-            console.log(_this.$router.states);
-          },
-          "push": state => {
-            _this.$router.states.push(state);
-            _this.$router.reload();
-          },
-          "pop": () => {
-            _this.$router.states.pop();
-            _this.$router.reload();
-          },
-          "goto": state => {
-            this.$router.states[this.$router.states.length] = state;
-            _this.$router.reload();
-          }
-        };
-
-      }
-
       this.$uid = uid++;
       options = options || {};
 
@@ -253,13 +223,14 @@
 
       // 方法名称
       let callback_name = callbackTemplate.replace(/\([^)]{0,}\)/, '');
+      let callback_params = callbackTemplate.replace(/[^(]{1,}\({0,1}([^)]{0,})\){0,1}/, "$1").split(',');
 
       // 绑定
       bind(el, type, function () {
 
         // 执行方法
-        // 帮助：默认参数等参数问题目前没有考虑
-        _this.methods[callback_name].apply(_this);
+        // 目前不支持传递变量
+        _this.methods[callback_name].apply(_this, callback_params);
       });
     };
 
@@ -299,16 +270,6 @@
 
       ].indexOf(callbackName) > -1 && isFunction(this[callbackName])) {
         this[callbackName].call(this);
-      }
-
-      if (this.$uid === 1 && callbackName === 'mounted') {
-
-        // 解析地址栏的路由
-        let routerString = (window.location.href + "#").split(/#\/{0,1}/)[1].replace(/\?.{0,}/, "").split('/');
-        for (let i = 0; i < routerString.length; i++) {
-          this.$router.push(routerString[i]);
-        }
-
       }
 
     };
@@ -578,6 +539,8 @@
 
     const node = document.createElement(tagName);
 
+    let directive = [], event = [], textBind = [], component = [], dynamicComponent = [];
+
     if (/ui\-/.test(tagName.toLowerCase())) {
       // 如果是一个组件
       // 子结点失去意义
@@ -588,11 +551,23 @@
         directive: [],
         textBind: [],
         event: [],
-        component: []
+        component: [],
+        dynamicComponent: []
       };
     }
 
-    let directive = [], event = [], textBind = [], component = [];
+    // 如果是动态组件
+    // 特别标记一下
+    else if (tagName.toLowerCase() == 'component') {
+
+      // 如果是动态组件，孩子结点直接无视
+      children = [];
+
+      // 组件动态组件
+      dynamicComponent.push({
+        el: node
+      });
+    }
 
     attrs = attrs || {};
     for (let key in attrs) {
@@ -660,6 +635,11 @@
           component.push(childNode.component[i]);
         }
 
+        // 合并动态组件
+        for (let i = 0; i < childNode.dynamicComponent.length; i++) {
+          dynamicComponent.push(childNode.dynamicComponent[i]);
+        }
+
         // 合并文本结点
         for (let i = 0; i < childNode.textBind.length; i++) {
           textBind.push(childNode.textBind[i]);
@@ -680,7 +660,8 @@
       directive,
       textBind,
       event,
-      component
+      component,
+      dynamicComponent
     };
 
   }
@@ -755,7 +736,8 @@
   let renderDirective = function (_this, directives, hookName) {
     for (let i = 0; i < directives.length; i++) {
       let directiveE = directives[i];
-      let directive = _this.$directive[directiveE.name];
+      let names = (directiveE.name + ":").split(':');
+      let directive = _this.$directive[names[0]];
 
       // 如果指令没有注册
       if (!directive) {
@@ -770,10 +752,35 @@
           {
             value: get(_this, directiveE.value),
             arg: directiveE.value,
+            type: names[1],
             target: _this
           }
         );
       }
+    }
+  };
+
+  // 挂载和更新动态组件
+  let refurbishDynamicComponent = function (_this, dynamicComponents, isBind) {
+    for (let i = 0; i < dynamicComponents.length; i++) {
+      let dynamicComponent = dynamicComponents[i];
+
+      // 如果不是第一次，而且值没有改变
+      if (!isBind && dynamicComponent.el._dynamic_component_ == dynamicComponent.el.getAttribute('is')) {
+        continue;
+      } else {
+        // 如果是第一次，或is改变了
+        dynamicComponent.el._dynamic_component_ = dynamicComponent.el.getAttribute('is');
+      }
+
+      // 重新挂载组件
+      dynamicComponent.el.innerHTML = '<i></i>';
+      let targetEl = dynamicComponent.el.firstElementChild;
+
+      let options = JSON.parse(dynamicComponent.el._dynamic_component_);
+      options.el = targetEl;
+      _this._new(options);
+
     }
   };
 
@@ -796,12 +803,16 @@
       // 挂载好指令等需要update的时候维护的数据
       this.$directiveE = vnode.directive;
       this.$textBindE = vnode.textBind;
+      this.$dynamicComponent = vnode.dynamicComponent;
 
       // 第一次主动更新{{}}的值
       refurbishTextBind(this, this.$textBindE);
 
       // 指令inserted
       renderDirective(this, this.$directiveE, 'inserted');
+
+      // 第一次初始化动态组件
+      refurbishDynamicComponent(this, this.$dynamicComponent, true);
 
       // 启动数据监听
       watcher(this);
@@ -860,6 +871,9 @@
 
       // 指令update
       renderDirective(this, this.$directiveE, 'update');
+
+      // 更新动态组件
+      refurbishDynamicComponent(this, this.$dynamicComponent);
 
     };
 
@@ -947,13 +961,27 @@
    * v-bind="express"
    */
 
-  var vBind = {
-    inserted: function (el, binding) {
-      el.value = el.textContent = binding.value;
-    },
-    update: function (el, binding) {
+  let update = function (el, binding) {
+
+    if (binding.value && !isString(binding.value)) {
+      binding.value = JSON.stringify(binding.value);
+    }
+
+    // 默认或者value类型，表示赋值
+    if (binding.type == '' || binding.type == 'value') {
       el.value = el.textContent = binding.value;
     }
+
+    // 负责设置属性
+    else {
+      el.setAttribute(binding.type, binding.value);
+    }
+
+  };
+
+  var vBind = {
+    inserted: update,
+    update
   };
 
   /**
@@ -974,20 +1002,6 @@
     }
   };
 
-  var uiComponent = {
-    template:"<div>动态组件开发中</div>",
-    created(){
-      
-    }
-  };
-
-  var uiRouter = {
-    template:"<div>路由开发中</div>",
-    created(){
-      
-    }
-  };
-
   /**
    * 备注：除非特殊情况，_开头的表示内置方法，$开头的表示内置资源
    * =========================================
@@ -1000,10 +1014,6 @@
   // 挂载内置指令
   Abandon.directive("bind", vBind); // v-bind单向绑定
   Abandon.directive("model", vModel); // v-model双向绑定
-
-  // 注册内置组件
-  Abandon.component("component", uiComponent); // 动态组件
-  Abandon.component("router", uiRouter); // 路由
 
   // 把组件挂载到页面中去
   Abandon.prototype._mount = function (el) {

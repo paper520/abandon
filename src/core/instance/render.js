@@ -29,7 +29,8 @@ let refurbishTextBind = function (_this, textBinds) {
 let renderDirective = function (_this, directives, hookName) {
   for (let i = 0; i < directives.length; i++) {
     let directiveE = directives[i];
-    let directive = _this.$directive[directiveE.name];
+    let names = (directiveE.name + ":").split(':');
+    let directive = _this.$directive[names[0]];
 
     // 如果指令没有注册
     if (!directive) {
@@ -44,10 +45,35 @@ let renderDirective = function (_this, directives, hookName) {
         {
           value: get(_this, directiveE.value),
           arg: directiveE.value,
+          type: names[1],
           target: _this
         }
       );
     }
+  }
+};
+
+// 挂载和更新动态组件
+let refurbishDynamicComponent = function (_this, dynamicComponents, isBind) {
+  for (let i = 0; i < dynamicComponents.length; i++) {
+    let dynamicComponent = dynamicComponents[i];
+
+    // 如果不是第一次，而且值没有改变
+    if (!isBind && dynamicComponent.el._dynamic_component_ == dynamicComponent.el.getAttribute('is')) {
+      continue;
+    } else {
+      // 如果是第一次，或is改变了
+      dynamicComponent.el._dynamic_component_ = dynamicComponent.el.getAttribute('is');
+    }
+
+    // 重新挂载组件
+    dynamicComponent.el.innerHTML = '<i></i>';
+    let targetEl = dynamicComponent.el.firstElementChild;
+
+    let options = JSON.parse(dynamicComponent.el._dynamic_component_);
+    options.el = targetEl;
+    _this._new(options);
+
   }
 };
 
@@ -73,12 +99,16 @@ export function renderMixin(Abandon) {
     // 挂载好指令等需要update的时候维护的数据
     this.$directiveE = vnode.directive;
     this.$textBindE = vnode.textBind;
+    this.$dynamicComponent = vnode.dynamicComponent;
 
     // 第一次主动更新{{}}的值
     refurbishTextBind(this, this.$textBindE);
 
     // 指令inserted
     renderDirective(this, this.$directiveE, 'inserted');
+
+    // 第一次初始化动态组件
+    refurbishDynamicComponent(this, this.$dynamicComponent, true);
 
     // 启动数据监听
     watcher(this);
@@ -137,6 +167,9 @@ export function renderMixin(Abandon) {
 
     // 指令update
     renderDirective(this, this.$directiveE, 'update');
+
+    // 更新动态组件
+    refurbishDynamicComponent(this, this.$dynamicComponent);
 
   };
 
