@@ -1,5 +1,5 @@
 /*!
-* abandon v1.0.2-alpha
+* abandon v1.1.0
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -774,10 +774,11 @@
       }
 
       // 重新挂载组件
+      // 销毁前后钩子没有调用
       dynamicComponent.el.innerHTML = '<i></i>';
       let targetEl = dynamicComponent.el.firstElementChild;
 
-      let options = JSON.parse(dynamicComponent.el._dynamic_component_);
+      let options = _this.$component[dynamicComponent.el._dynamic_component_];
       options.el = targetEl;
       _this._new(options);
 

@@ -3,7 +3,7 @@
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 /*!
-* abandon v1.0.2-alpha
+* abandon v1.1.0
 * (c) 2007-2019 心叶 git+https://github.com/yelloxing/abandon.git
 * License: MIT
 */
@@ -763,10 +763,11 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
       }
 
       // 重新挂载组件
+      // 销毁前后钩子没有调用
       dynamicComponent.el.innerHTML = '<i></i>';
       var targetEl = dynamicComponent.el.firstElementChild;
 
-      var options = JSON.parse(dynamicComponent.el._dynamic_component_);
+      var options = _this.$component[dynamicComponent.el._dynamic_component_];
       options.el = targetEl;
       _this._new(options);
     }
