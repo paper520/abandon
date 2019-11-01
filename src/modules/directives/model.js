@@ -4,13 +4,13 @@
  * v-model="express"
  */
 
-import { bind } from '../../utils/tool';
+import xhtml from 'xhtml.js';
 import set from '@yelloxing/core.js/set';
 
 export default {
   inserted: function (el, binding) {
     el.value = binding.value;
-    bind(el, 'input', () => {
+    xhtml(el).bind('input', () => {
       set(binding.target, binding.arg, el.value);
     });
   },

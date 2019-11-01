@@ -35,17 +35,3 @@ export function toNode(template) {
   container.innerHTML = template;
   return container.firstElementChild;
 };
-
-/**
- * 一个单纯的绑定事件方法
- * @param {dom} target 结点
- * @param {string} eventType 浏览器事件，比如click,dblclick等
- * @param {function} callback 回调函数
- */
-export function bind(target, eventType, callback) {
-  if (window.attachEvent) {
-    target.attachEvent("on" + eventType, callback); // 后绑定的先执行
-  } else {
-    target.addEventListener(eventType, callback, false);// 捕获
-  }
-};

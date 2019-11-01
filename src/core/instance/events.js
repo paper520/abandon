@@ -3,7 +3,7 @@
  * 事件相关的处理
  */
 
-import { bind } from '../../utils/tool';
+import xhtml from 'xhtml.js';
 
 export function eventsMixin(Abandon) {
 
@@ -16,7 +16,7 @@ export function eventsMixin(Abandon) {
     let callback_params = callbackTemplate.replace(/[^(]{1,}\({0,1}([^)]{0,})\){0,1}/, "$1").split(',');
 
     // 绑定
-    bind(el, type, function () {
+    xhtml(el).bind(type, function () {
 
       // 执行方法
       // 目前不支持传递变量
