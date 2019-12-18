@@ -1,11 +1,11 @@
 {
   "name": "abandon-demo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "📚 一个简单的abandon使用测试或例子",
   "scripts": {
     "start": "npm install && npm run dev",
     "dev": "node_modules/.bin/webpack-dev-server --open --config webpack.dev.js",
-    "build": "node_modules/.bin/webpack --config webpack.prod.js"
+    "build": "cuf -d ./build && node_modules/.bin/webpack --config webpack.prod.js"
   },
   "keywords": [
     "abandon",
@@ -19,6 +19,7 @@
     "babel-loader": "^7.0.0",
     "babel-preset-env": "^1.7.0",
     "css-loader": "^2.1.1",
+    "cuf": "^1.1.5",
     "file-loader": "^4.0.0",
     "node-sass": "^4.11.0",
     "postcss": "^7.0.14",
@@ -34,7 +35,7 @@
   },
   "dependencies": {
     "@yelloxing/normalize.css": "^0.2.0",
-    "image2d": "^1.4.6",
+    "image2d": "^1.4.11",
     "promise-polyfill": "8.1.3"
   }
 }

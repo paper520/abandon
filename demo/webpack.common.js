@@ -29,7 +29,7 @@ module.exports = {
   resolve: {
     extensions: [".js"],
     alias: {
-      "abandon": path.join(process.cwd(), "../dist/abandon.babel.js")
+      "abandon": path.join(process.cwd(), "../dist/abandon.js")
     }
   },
 };
