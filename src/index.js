@@ -3,3 +3,13 @@
  * =========================================
  * 整合全部资源，对外暴露调用接口
  */
+
+let Abandon = function () {
+  console.error('git+https://github.com/yelloxing/abandon.git');
+};
+
+if (typeof module === "object" && typeof module.exports === "object") {
+  module.exports = Abandon;
+} else {
+  window.Abandon = Abandon;
+}
