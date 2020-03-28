@@ -8,9 +8,9 @@
 > 温馨提示：目前进入2.0研发阶段，预计会实现一个比较全的小型VUE框架，可以帮助你更好的学习源码，敬请期待，也欢迎你的加入！
 
 ## Issues
-使用的时候遇到任何问题或有好的建议，请点击进入[issue](https://github.com/paper/abandon/issues)！
+使用的时候遇到任何问题或有好的建议，请点击进入[issue](https://github.com/paper520/abandon/issues)！
 
-因为是学习项目，我们目前不打算给出使用文档，不过我们有一个[完整用例](https://github.com/paper/abandon/tree/master/demo)可供参考，里面会提供各种用法并添加好备注。
+因为是学习项目，我们目前不打算给出使用文档，不过我们有一个[完整用例](https://github.com/paper520/abandon/tree/master/demo)可供参考，里面会提供各种用法并添加好备注。
 
 ## How to use?
 如果你开发的是一个web项目，直接在页面引入打包后的文件后即可（在代码中通过Abandon调用）：
@@ -39,6 +39,6 @@ const Abandon = require("abandon");
 
 ## License
 
-[MIT](https://github.com/paper/abandon/blob/master/LICENSE)
+[MIT](https://github.com/paper520/abandon/blob/master/LICENSE)
 
-Copyright (c) 2019-2020 paper
+Copyright (c) 2019-2020 paper520
