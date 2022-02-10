@@ -21,7 +21,7 @@
     "css-loader": "^2.1.1",
     "cuf": "^1.1.5",
     "file-loader": "^4.0.0",
-    "node-sass": "^4.11.0",
+    "node-sass": "^7.0.0",
     "postcss": "^7.0.14",
     "postcss-loader": "^3.0.0",
     "sass-loader": "^7.1.0",
